@@ -37,6 +37,9 @@ COPY api/ ./api/
 COPY data/ ./data/
 COPY run.py gunicorn_conf.py vercel.json ./
 
+# Pre-initialize SQLite database so container startup is instant (<50ms)
+RUN python -c "from app.services.data_service import data_service; data_service.initialize_database()"
+
 # Ensure correct permissions for non-root user
 RUN chown -R resolviq:resolviq /app && \
     chmod -R 755 /app
@@ -52,4 +55,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
 # Start production server
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

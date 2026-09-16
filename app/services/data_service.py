@@ -43,9 +43,13 @@ class DataService:
         self.csv_path = csv_path or settings.resolved_csv_path
 
     def get_connection(self) -> sqlite3.Connection:
-        """Create and return an SQLite database connection with row factory."""
-        conn = sqlite3.connect(str(self.db_path))
+        """Create and return an SQLite database connection with row factory and WAL mode."""
+        conn = sqlite3.connect(str(self.db_path), timeout=30.0)
         conn.row_factory = sqlite3.Row
+        try:
+            conn.execute("PRAGMA journal_mode=WAL;")
+        except Exception:
+            pass
         return conn
 
     def initialize_database(self, force_reload: bool = False) -> int:
