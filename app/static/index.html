@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+  <title>ResolvIQ | Enterprise AI Support Ticket Analytics &amp; Anomaly Intelligence</title>
+  <meta name="description" content="ResolvIQ: Production-ready AI-powered customer support ticket analytics and statistical anomaly detection platform.">
+  <link rel="icon" type="image/jpeg" href="/static/resolviq_logo.jpg">
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- ====================================================================
+       Top Navigation Bar
+       ==================================================================== -->
+  <header class="app-top-bar">
+    <div class="app-brand-group">
+      <div class="app-brand-logo-container" title="ResolvIQ AI Platform">
+        <img src="/static/resolviq_logo.jpg" alt="ResolvIQ Logo" class="app-logo-img" />
+      </div>
+      <div class="app-brand-text">
+        <div class="app-service-title">
+          ResolvIQ
+          <span class="app-service-badge">AI Intelligence Platform</span>
+        </div>
+        <span class="app-service-subtext">Enterprise Support Analytics &amp; Statistical Anomaly Scanner</span>
+      </div>
+    </div>
+
+    <div class="app-top-actions">
+      <!-- Telemetry Pills (Desktop) -->
+      <div class="app-top-meta">
+        <div class="telemetry-pill">
+          <span class="status-indicator-dot"></span>
+          <span id="healthStatusText">Operational</span>
+        </div>
+        <span class="app-meta-tag" id="metaDb">DB: Connected (500)</span>
+        <span class="app-meta-tag" id="metaProvider">Provider: Ollama</span>
+        <span class="app-meta-tag font-mono" id="metaModel">qwen3:8b</span>
+        <a href="/docs" target="_blank" class="app-docs-link" title="Open Interactive Swagger OpenAPI Documentation">
+          <span>&#128196;</span> API Docs
+        </a>
+      </div>
+
+      <!-- Theme Switcher Button -->
+      <button class="theme-toggle-btn" id="themeToggleBtn" title="Toggle Light / Dark Mode" aria-label="Toggle Theme">
+        <span id="themeIcon">&#127769;</span>
+      </button>
+
+      <!-- Mobile Hamburger Button -->
+      <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Toggle Navigation Menu">
+        &#9776;
+      </button>
+    </div>
+  </header>
+
+  <!-- ====================================================================
+       Subheader & Breadcrumb Bar
+       ==================================================================== -->
+  <div class="app-subheader">
+    <nav class="app-breadcrumbs" aria-label="Breadcrumb">
+      <span>Console</span>
+      <span>&rsaquo;</span>
+      <span>Support Intelligence</span>
+      <span>&rsaquo;</span>
+      <span class="active" id="currentBreadcrumb">Executive Overview</span>
+    </nav>
+    <div class="app-header-actions">
+      <button class="btn-secondary" id="reloadDbBtn" title="Re-ingest dataset from CSV into SQLite">
+        <span>&#8635;</span> Reload Dataset
+      </button>
+    </div>
+  </div>
+
+  <!-- ====================================================================
+       Progressive Disclosure Navigation Tabs
+       ==================================================================== -->
+  <nav class="app-tabs-container" role="tablist">
+    <button class="nav-tab-btn active" data-tab="tabOverview" role="tab">
+      <span>&#128202;</span> Executive Overview
+    </button>
+    <button class="nav-tab-btn" data-tab="tabQueryStudio" role="tab">
+      <span>&#129302;</span> AI Query Studio
+    </button>
+    <button class="nav-tab-btn" data-tab="tabAnomalies" role="tab">
+      <span>&#9888;</span> Anomaly Center
+      <span class="tab-badge" id="anomalyTabBadge">177</span>
+    </button>
+    <button class="nav-tab-btn" data-tab="tabTickets" role="tab">
+      <span>&#128194;</span> Ticket Repository
+      <span class="tab-badge" id="ticketsTabBadge">500</span>
+    </button>
+    <button class="nav-tab-btn" data-tab="tabSystem" role="tab">
+      <span>&#9881;</span> Architecture &amp; Telemetry
+    </button>
+  </nav>
+
+  <!-- ====================================================================
+       Main Workspace
+       ==================================================================== -->
+  <main class="app-workspace">
+
+    <!-- ==================================================================
+         TAB 1: Executive Overview Dashboard
+         ================================================================== -->
+    <section class="tab-panel active" id="tabOverview">
+      <!-- KPI Metric Row -->
+      <div class="kpi-row">
+        <div class="kpi-card">
+          <div class="kpi-header">
+            <span class="kpi-label">Total Tickets</span>
+            <span class="kpi-icon-badge badge-blue">&#128202;</span>
+          </div>
+          <div class="kpi-metric-val" id="valTotal">500</div>
+          <div class="kpi-caption">SQLite B-tree indexed dataset</div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-header">
+            <span class="kpi-label">Active / Open</span>
+            <span class="kpi-icon-badge badge-orange">&#9203;</span>
+          </div>
+          <div class="kpi-metric-val" id="valOpen">111</div>
+          <div class="kpi-caption" id="valEscalatedCaption">62 escalated tickets</div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-header">
+            <span class="kpi-label">Resolved Tickets</span>
+            <span class="kpi-icon-badge badge-green">&#9989;</span>
+          </div>
+          <div class="kpi-metric-val" id="valResolved">327</div>
+          <div class="kpi-caption" id="valAvgResolCaption">Avg resol: 19.16 hrs</div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-header">
+            <span class="kpi-label">Detected Anomalies</span>
+            <span class="kpi-icon-badge badge-red">&#9888;</span>
+          </div>
+          <div class="kpi-metric-val" id="valAnomalies">177</div>
+          <div class="kpi-caption">Tukey IQR &amp; SLA breach engines</div>
+        </div>
+      </div>
+
+      <!-- Interactive SVG Analytics Charts Row -->
+      <div class="analytics-grid">
+        <!-- Category Breakdown Chart -->
+        <div class="chart-card">
+          <div class="chart-header">
+            <span class="chart-title">&#128194; Volume by Category</span>
+            <span class="tag-badge tag-category">Distribution</span>
+          </div>
+          <div class="chart-container" id="categoryChartContainer">
+            <!-- Dynamic SVG Injected by JS -->
+          </div>
+          <div class="chart-legend" id="categoryChartLegend"></div>
+        </div>
+
+        <!-- Priority Pipeline Chart -->
+        <div class="chart-card">
+          <div class="chart-header">
+            <span class="chart-title">&#9889; Ticket Urgency Priority</span>
+            <span class="tag-badge tag-critical">Severity</span>
+          </div>
+          <div class="chart-container" id="priorityChartContainer">
+            <!-- Dynamic SVG Injected by JS -->
+          </div>
+          <div class="chart-legend" id="priorityChartLegend"></div>
+        </div>
+
+        <!-- Operational SLAs Breakdown -->
+        <div class="chart-card">
+          <div class="chart-header">
+            <span class="chart-title">&#9201; SLA &amp; Resolution Metrics</span>
+            <span class="tag-badge tag-low">Verified</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 12px; padding-top: 4px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
+              <span style="font-size: 0.82rem; color: var(--text-secondary);">Avg Response Time</span>
+              <span class="tag-badge tag-open" style="font-size: 0.82rem; font-weight: 700;">2.62 hrs</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
+              <span style="font-size: 0.82rem; color: var(--text-secondary);">Avg Resolution Time</span>
+              <span class="tag-badge tag-resolved" style="font-size: 0.82rem; font-weight: 700;">19.16 hrs</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
+              <span style="font-size: 0.82rem; color: var(--text-secondary);">Avg CSAT Rating</span>
+              <span class="tag-badge tag-category" style="font-size: 0.82rem; font-weight: 700;">3.75 / 5.0 &#9733;</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-size: 0.82rem; color: var(--text-secondary);">IQR Outlier Threshold</span>
+              <span class="tag-badge tag-high" style="font-size: 0.82rem; font-weight: 700;">48.35 hrs</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Flagship Hero AI Inquiry Console -->
+      <div class="enterprise-card hero-ai-console-card">
+        <!-- Ambient Glowing Border Highlight -->
+        <div class="hero-glow-border"></div>
+
+        <div class="hero-console-header">
+          <div class="hero-title-group">
+            <div class="hero-badge-row">
+              <span class="hero-engine-badge">
+                <span class="sparkle-icon">✦</span> ResolvIQ Neural Synthesis Engine
+              </span>
+              <span class="hero-accuracy-tag">
+                <span class="badge-dot"></span> 100% Zero-Hallucination
+              </span>
+            </div>
+            <h2 class="hero-console-heading">Ask Natural Language Operational Questions</h2>
+            <p class="hero-console-subtext">
+              Ask anything in plain English. Natural language is mapped to validated Pydantic AST and executed directly as strictly parameterized SQLite against 500 support tickets in milliseconds.
+            </p>
+          </div>
+          <div class="hero-actions-right">
+            <button class="btn-secondary hero-studio-link-btn" id="goToStudioBtn">
+              <span>Open Query Studio</span> &rarr;
+            </button>
+          </div>
+        </div>
+
+        <!-- Trust & Telemetry Feature Pills -->
+        <div class="hero-trust-bar">
+          <span class="trust-pill" title="Security Guaranteed: Never executes raw unvalidated LLM SQL code"><span class="trust-icon">&#128737;</span> Parameterized SQL Shield</span>
+          <span class="trust-pill" title="Hardware Accelerated: B-Tree indexed queries execute in sub-millisecond"><span class="trust-icon">&#9889;</span> B-Tree Indexed (&lt;5ms)</span>
+          <span class="trust-pill" title="Multi-Tier Orchestration: Cloud Groq 70B &amp; Local Ollama 8B with Fallback"><span class="trust-icon">&#129504;</span> Groq / Ollama / Fallback</span>
+          <span class="trust-pill" title="Live Operational Customer Support Dataset"><span class="trust-icon">&#128193;</span> 500 Ticket Records</span>
+        </div>
+
+        <!-- Curated Interactive Inquiry Cards -->
+        <div class="hero-prompts-section">
+          <div class="hero-prompts-label">
+            <span>Operational Question Templates:</span>
+            <span class="prompts-sublabel">(Click any card to analyze instantly)</span>
+          </div>
+          <div class="hero-prompts-grid">
+            <button type="button" class="hero-prompt-card" data-query="How many tickets are currently open?">
+              <span class="prompt-category-badge badge-blue">&#128202; Volume</span>
+              <span class="prompt-text">How many tickets are currently open?</span>
+              <span class="prompt-expected">Count &rarr; 111 Open</span>
+            </button>
+
+            <button type="button" class="hero-prompt-card" data-query="How many critical tickets are unresolved?">
+              <span class="prompt-category-badge badge-red">&#128680; Escalations</span>
+              <span class="prompt-text">How many critical tickets are unresolved?</span>
+              <span class="prompt-expected">SLA &rarr; 31 Critical</span>
+            </button>
+
+            <button type="button" class="hero-prompt-card" data-query="Which agent resolved the most tickets this month?">
+              <span class="prompt-category-badge badge-green">&#128101; Performance</span>
+              <span class="prompt-text">Which agent resolved the most tickets this month?</span>
+              <span class="prompt-expected">Top &rarr; AGT-12 / AGT-09</span>
+            </button>
+
+            <button type="button" class="hero-prompt-card" data-query="What is the average customer rating for Technical category tickets?">
+              <span class="prompt-category-badge badge-purple">&#11088; CSAT</span>
+              <span class="prompt-text">What is the average rating for Technical tickets?</span>
+              <span class="prompt-expected">Metric &rarr; 3.74 Rating</span>
+            </button>
+
+            <button type="button" class="hero-prompt-card" data-query="Show me all Critical tickets not resolved within 12 hours.">
+              <span class="prompt-category-badge badge-amber">&#9201; Breach Outliers</span>
+              <span class="prompt-text">Show Critical tickets not resolved in 12h</span>
+              <span class="prompt-expected">Filter &rarr; 3 Outliers</span>
+            </button>
+
+            <button type="button" class="hero-prompt-card" data-query="Which agent has the lowest average customer rating?">
+              <span class="prompt-category-badge badge-cyan">&#128269; CSAT Drop</span>
+              <span class="prompt-text">Which agent has the lowest average customer rating?</span>
+              <span class="prompt-expected">Min &rarr; AGT-08 (3.48)</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- High-Tech Command Bar Form -->
+        <form id="overviewQueryForm" class="hero-query-form">
+          <div class="hero-command-bar">
+            <div class="command-input-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+            </div>
+            <input 
+              type="text" 
+              id="overviewQueryInput" 
+              class="hero-command-input" 
+              placeholder="Ask anything (e.g. Which category has the highest number of unresolved tickets?)..." 
+              required
+              autocomplete="off"
+            />
+            <div class="command-input-actions">
+              <kbd class="hero-kbd-pill" title="Press Enter to execute">Enter &#9166;</kbd>
+              <button type="submit" id="overviewSubmitBtn" class="btn-hero-submit">
+                <span class="sparkle-icon">&#10022;</span>
+                <span class="btn-text">Ask ResolvIQ</span>
+              </button>
+            </div>
+          </div>
+        </form>
+
+          <!-- Dynamic Result Box -->
+          <div class="result-card-box hidden" id="overviewResultCard">
+            <!-- Top Shimmer Accent -->
+            <div class="result-shimmer-bar"></div>
+
+            <div class="result-card-header">
+              <div class="result-meta-badges">
+                <span class="ai-engine-badge">
+                  <span class="sparkle-icon">✦</span> AI Intelligence Engine
+                </span>
+                <span class="query-type-tag" id="overviewQueryType">COUNT</span>
+                <span class="exec-time-pill" id="overviewExecTime">-- ms</span>
+                <span class="deterministic-badge" title="Guaranteed safe execution against B-tree indexed SQLite database">
+                  <span class="badge-dot"></span> 100% Deterministic SQL
+                </span>
+              </div>
+              <div class="result-actions-bar">
+                <button class="btn-secondary btn-icon-label" id="overviewCopyAnswerBtn" title="Copy answer to clipboard">
+                  <span class="btn-icon">&#128203;</span> <span class="btn-text">Copy Answer</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Loading Thinking State -->
+            <div class="query-thinking-state hidden" id="overviewThinkingState">
+              <div class="thinking-spinner"></div>
+              <div class="thinking-content">
+                <div class="thinking-title">Synthesizing Natural Language &amp; Schema Mapping...</div>
+                <div class="thinking-subtitle">Validating Pydantic AST &bull; Compiling Zero-Injection SQLite Plan</div>
+              </div>
+              <div class="thinking-timer" id="overviewTimer">0.0s</div>
+            </div>
+
+            <!-- Verified Answer Hero Banner -->
+            <div class="answer-banner" id="overviewAnswerBanner">
+              <div class="answer-check-icon" title="Zero-Hallucination Verified Data Result">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                  <path d="m9 12 2 2 4-4"/>
+                </svg>
+              </div>
+              <div class="answer-body">
+                <div class="answer-header-title">
+                  <h4>Verified Data-Backed Answer</h4>
+                  <span class="answer-verified-pill">Ground Truth Verified</span>
+                </div>
+                <p id="overviewAnswerText">--</p>
+              </div>
+            </div>
+
+            <!-- Applied Filters Breakdown -->
+            <div class="applied-filters-wrap hidden" id="overviewFiltersWrap">
+              <div class="filters-wrap-label">
+                <span class="filters-icon">&#9889;</span>
+                <span>Active Scope Filters:</span>
+              </div>
+              <div id="overviewFiltersList" class="filters-chips-container"></div>
+            </div>
+
+            <!-- Technical Architecture & SQL Audit Accordion -->
+            <div class="tech-inspector-toggle" id="overviewTechToggle">
+              <div class="toggle-label-wrap">
+                <span class="toggle-icon">&#9881;</span>
+                <span class="toggle-text">Inspect Technical Architecture &amp; Compiled SQL</span>
+                <span class="toggle-badge">Zero-Hallucination Audit</span>
+              </div>
+              <span id="overviewTechArrow" class="toggle-arrow">&#9662;</span>
+            </div>
+            <div class="tech-inspector-body hidden" id="overviewTechBody">
+              <div class="inspector-card">
+                <div class="inspector-card-header">
+                  <span class="inspector-section-label">Safe Parameterized SQLite Query Executed</span>
+                  <button class="btn-code-copy" id="overviewCopySqlBtn" title="Copy SQL statement">Copy SQL</button>
+                </div>
+                <div class="code-block-display" id="overviewSqlExecuted">--</div>
+              </div>
+              <div class="inspector-card">
+                <div class="inspector-section-label">Bound Execution Parameters</div>
+                <div class="code-block-display font-mono" id="overviewSqlParams">[]</div>
+              </div>
+              <div class="inspector-card">
+                <div class="inspector-section-label">Validated Pydantic QueryIntent AST</div>
+                <div class="code-block-display font-mono" id="overviewQueryIntentJson">{}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Outliers Snapshot Table -->
+      <div class="enterprise-card">
+        <div class="card-header-bar">
+          <div class="card-title-group">
+            <h3>Urgent Outliers Snapshot</h3>
+            <span class="tag-badge tag-critical">Top Priority</span>
+          </div>
+          <button class="btn-secondary" id="viewAllAnomaliesBtn">View All in Anomaly Center &rarr;</button>
+        </div>
+        <div class="table-scroll-wrap">
+          <table class="enterprise-table" id="overviewAnomaliesTable">
+            <thead>
+              <tr>
+                <th>Ticket ID</th>
+                <th>Anomaly Type</th>
+                <th>Severity</th>
+                <th>Value / Cutoff</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="overviewAnomaliesBody">
+              <tr><td colspan="5" class="text-center">Loading priority outliers...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================================================================
+         TAB 2: AI Query Studio
+         ================================================================== -->
+    <section class="tab-panel" id="tabQueryStudio">
+      <div class="enterprise-card">
+        <div class="card-header-bar">
+          <div class="card-title-group">
+            <h2>Natural Language Query Studio</h2>
+            <span class="tag-badge tag-open">Multi-Tier Pipeline</span>
+          </div>
+          <span class="card-subtext">Groq Cloud (Fast) &bull; Ollama Qwen3:8b &bull; Deterministic Fallback</span>
+        </div>
+        <div class="card-body-padding">
+          <p class="card-subtext" style="margin-bottom: 16px;">
+            Input any plain English question. The system maps your intent into a validated <code>QueryIntent</code> schema and executes safe SQL against SQLite. Zero LLM hallucinations.
+          </p>
+
+          <!-- Categorized Prompt Chips -->
+          <div class="chips-category-label">&#128202; Volume &amp; Status</div>
+          <div class="chips-container">
+            <button class="query-chip featured" data-query="How many tickets are currently open?">&#10024; How many tickets are currently open?</button>
+            <button class="query-chip featured" data-query="How many critical tickets are unresolved?">&#10024; How many critical tickets are unresolved?</button>
+            <button class="query-chip" data-query="Which category has the highest number of unresolved tickets?">Which category has most unresolved tickets?</button>
+            <button class="query-chip" data-query="How many High priority tickets were created this week?">High priority tickets this week</button>
+          </div>
+
+          <div class="chips-category-label">&#128100; Agent Performance</div>
+          <div class="chips-container">
+            <button class="query-chip featured" data-query="Which agent resolved the most tickets?">&#10024; Which agent resolved the most tickets?</button>
+            <button class="query-chip" data-query="Which agent has the lowest average customer rating?">Which agent has lowest rating?</button>
+          </div>
+
+          <div class="chips-category-label">&#9888; SLA &amp; Resolution Outliers</div>
+          <div class="chips-container">
+            <button class="query-chip featured" data-query="Show me all Critical tickets not resolved within 12 hours.">&#10024; Critical tickets not resolved in 12h</button>
+            <button class="query-chip" data-query="Show the 10 tickets with the longest resolution time.">Top 10 longest resolution tickets</button>
+            <button class="query-chip" data-query="Are there any anomalies in resolution times?">Are there resolution time anomalies?</button>
+          </div>
+
+          <div class="chips-category-label">&#11088; CSAT &amp; Satisfaction</div>
+          <div class="chips-container">
+            <button class="query-chip featured" data-query="What is the average customer rating for Technical category tickets?">&#10024; Technical category avg rating</button>
+            <button class="query-chip" data-query="Show tickets with no customer rating.">Tickets with no customer rating</button>
+          </div>
+
+          <!-- Query Input Form -->
+          <form id="studioQueryForm">
+            <div class="query-input-bar">
+              <input 
+                type="text" 
+                id="studioQueryInput" 
+                class="query-input-field" 
+                placeholder="Ask any question about support tickets..." 
+                required
+              />
+              <button type="submit" id="studioSubmitBtn" class="btn-primary">
+                <span class="btn-label">Execute Query</span>
+              </button>
+            </div>
+          </form>
+
+          <!-- Query History Panel -->
+          <div class="history-section hidden" id="studioHistorySection">
+            <div style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Recent Queries</div>
+            <div class="history-chips-row" id="studioHistoryChips"></div>
+          </div>
+
+          <!-- Dynamic Result Box -->
+          <div class="result-card-box hidden" id="studioResultContainer">
+            <!-- Top Shimmer Accent -->
+            <div class="result-shimmer-bar"></div>
+
+            <div class="result-card-header">
+              <div class="result-meta-badges">
+                <span class="ai-engine-badge">
+                  <span class="sparkle-icon">✦</span> AI Intelligence Studio
+                </span>
+                <span class="query-type-tag" id="studioQueryType">COUNT</span>
+                <span class="exec-time-pill" id="studioExecTime">-- ms</span>
+                <span class="deterministic-badge" title="Guaranteed safe execution against B-tree indexed SQLite database">
+                  <span class="badge-dot"></span> 100% Deterministic SQL
+                </span>
+              </div>
+              <div class="result-actions-bar">
+                <button class="btn-secondary btn-icon-label" id="studioCopyAnswerBtn" title="Copy text answer">
+                  <span class="btn-icon">&#128203;</span> <span class="btn-text">Copy Answer</span>
+                </button>
+                <button class="btn-secondary btn-icon-label" id="studioCopyJsonBtn" title="Copy result data as JSON">
+                  <span class="btn-icon">{ }</span> <span class="btn-text">Copy JSON</span>
+                </button>
+                <button class="btn-dismiss" id="closeStudioResultBtn" title="Close result">&times;</button>
+              </div>
+            </div>
+
+            <!-- Loading Thinking State -->
+            <div class="query-thinking-state hidden" id="studioThinkingState">
+              <div class="thinking-spinner"></div>
+              <div class="thinking-content">
+                <div class="thinking-title">Synthesizing Natural Language &amp; Schema Mapping...</div>
+                <div class="thinking-subtitle">Validating Pydantic AST &bull; Compiling Zero-Injection SQLite Plan</div>
+              </div>
+              <div class="thinking-timer" id="studioTimer">0.0s</div>
+            </div>
+
+            <!-- Verified Answer Hero Banner -->
+            <div class="answer-banner" id="studioAnswerBanner">
+              <div class="answer-check-icon" title="Zero-Hallucination Verified Data Result">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                  <path d="m9 12 2 2 4-4"/>
+                </svg>
+              </div>
+              <div class="answer-body">
+                <div class="answer-header-title">
+                  <h4>Verified Data-Backed Answer</h4>
+                  <span class="answer-verified-pill">Ground Truth Verified</span>
+                </div>
+                <p id="studioAnswerText">--</p>
+              </div>
+            </div>
+
+            <!-- Applied Filters Breakdown -->
+            <div class="applied-filters-wrap hidden" id="studioFiltersWrap">
+              <div class="filters-wrap-label">
+                <span class="filters-icon">&#9889;</span>
+                <span>Active Scope Filters:</span>
+              </div>
+              <div id="studioFiltersList" class="filters-chips-container"></div>
+            </div>
+
+            <!-- Technical Architecture & SQL Audit Accordion -->
+            <div class="tech-inspector-toggle" id="studioTechToggle">
+              <div class="toggle-label-wrap">
+                <span class="toggle-icon">&#9881;</span>
+                <span class="toggle-text">Technical Architecture &amp; SQL Query Audit</span>
+                <span class="toggle-badge">Zero Hallucination Proof</span>
+              </div>
+              <span id="studioTechArrow" class="toggle-arrow">&#9662;</span>
+            </div>
+            <div class="tech-inspector-body hidden" id="studioTechBody">
+              <div class="inspector-card">
+                <div class="inspector-card-header">
+                  <span class="inspector-section-label">Safe Parameterized SQLite Query Executed</span>
+                  <button class="btn-code-copy" id="studioCopySqlBtn" title="Copy SQL statement">Copy SQL</button>
+                </div>
+                <div class="code-block-display" id="studioSqlExecuted">--</div>
+              </div>
+              <div class="inspector-card">
+                <div class="inspector-section-label">Bound Parameters</div>
+                <div class="code-block-display font-mono" id="studioSqlParams">[]</div>
+              </div>
+              <div class="inspector-card">
+                <div class="inspector-section-label">Validated Pydantic QueryIntent AST</div>
+                <div class="code-block-display font-mono" id="studioQueryIntentJson">{}</div>
+              </div>
+            </div>
+
+            <!-- Dynamic Result Table -->
+            <div class="table-scroll-wrap hidden" id="studioDataTableWrap">
+              <div class="dataset-preview-header">
+                <div class="preview-title-group">
+                  <span class="preview-icon">&#128202;</span>
+                  <span class="preview-title">Result Dataset Records</span>
+                </div>
+                <button class="btn-secondary btn-icon-label" id="studioExportCsvBtn">
+                  <span>&#128229;</span> Export Table (CSV)
+                </button>
+              </div>
+              <table class="enterprise-table" id="studioDataTable">
+                <thead id="studioTableHead"></thead>
+                <tbody id="studioTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================================================================
+         TAB 3: Anomaly Center
+         ================================================================== -->
+    <section class="tab-panel" id="tabAnomalies">
+      <div class="enterprise-card">
+        <div class="card-header-bar">
+          <div class="card-title-group">
+            <h2>Support Ticket Anomaly Scanner</h2>
+            <span class="tag-badge tag-critical" id="anomalyCenterBadge">177 Outliers Flagged</span>
+          </div>
+          <button class="btn-secondary" id="exportAnomaliesCsvBtn" title="Export all filtered anomalies to CSV">
+            <span>&#128190;</span> Export Anomalies (CSV)
+          </button>
+        </div>
+
+        <!-- Filter Controls Toolbar -->
+        <div class="filter-toolbar">
+          <div class="filter-item">
+            <label for="anomalySearchInput">Search:</label>
+            <input type="text" id="anomalySearchInput" class="search-input-control" placeholder="Search ticket ID or keyword..." />
+          </div>
+
+          <div class="filter-item">
+            <label for="filterType">Type:</label>
+            <select id="filterType" class="select-control">
+              <option value="">All Anomaly Types</option>
+              <option value="long_resolution_time">Long Resolution Time (IQR)</option>
+              <option value="unresolved_high_priority_aged">Unresolved High Priority &gt; 24h</option>
+              <option value="slow_response_time">Slow Response Time (P95)</option>
+              <option value="low_customer_rating">Low Customer Rating (&le; 2)</option>
+            </select>
+          </div>
+
+          <div class="filter-item">
+            <label for="filterSeverity">Severity:</label>
+            <select id="filterSeverity" class="select-control">
+              <option value="">All Severities</option>
+              <option value="critical">Critical</option>
+              <option value="high">High</option>
+              <option value="medium">Medium</option>
+            </select>
+          </div>
+
+          <div class="filter-item">
+            <label for="filterPriority">Priority:</label>
+            <select id="filterPriority" class="select-control">
+              <option value="">All Priorities</option>
+              <option value="Critical">Critical</option>
+              <option value="High">High</option>
+              <option value="Medium">Medium</option>
+              <option value="Low">Low</option>
+            </select>
+          </div>
+
+          <button id="resetFiltersBtn" class="btn-secondary">Reset Filters</button>
+        </div>
+
+        <!-- Anomalies Table -->
+        <div class="table-scroll-wrap">
+          <table class="enterprise-table" id="anomaliesTable">
+            <thead>
+              <tr>
+                <th>Ticket ID</th>
+                <th>Anomaly Type</th>
+                <th>Severity</th>
+                <th>Priority</th>
+                <th>Status</th>
+                <th>Value / Cutoff</th>
+                <th>Description</th>
+                <th>Created At</th>
+                <th>Agent</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="anomaliesTableBody">
+              <tr><td colspan="10" class="text-center">Scanning data for statistical and SLA anomalies...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================================================================
+         TAB 4: Ticket Repository
+         ================================================================== -->
+    <section class="tab-panel" id="tabTickets">
+      <div class="enterprise-card">
+        <div class="card-header-bar">
+          <div class="card-title-group">
+            <h2>Support Ticket Repository</h2>
+            <span class="tag-badge tag-open" id="ticketsCounterBadge">500 Records</span>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn-secondary" id="exportTicketsCsvBtn" title="Export currently filtered ticket dataset to CSV">
+              <span>&#128190;</span> Export Tickets (CSV)
+            </button>
+          </div>
+        </div>
+
+        <!-- Ticket Filter Toolbar -->
+        <div class="filter-toolbar">
+          <div class="filter-item">
+            <label for="ticketSearchInput">Search:</label>
+            <input type="text" id="ticketSearchInput" class="search-input-control" placeholder="Search ticket ID or summary..." />
+          </div>
+
+          <div class="filter-item">
+            <label for="ticketFilterCategory">Category:</label>
+            <select id="ticketFilterCategory" class="select-control">
+              <option value="">All Categories</option>
+              <option value="Billing">Billing</option>
+              <option value="Technical">Technical</option>
+              <option value="General">General</option>
+            </select>
+          </div>
+
+          <div class="filter-item">
+            <label for="ticketFilterPriority">Priority:</label>
+            <select id="ticketFilterPriority" class="select-control">
+              <option value="">All Priorities</option>
+              <option value="Critical">Critical</option>
+              <option value="High">High</option>
+              <option value="Medium">Medium</option>
+              <option value="Low">Low</option>
+            </select>
+          </div>
+
+          <div class="filter-item">
+            <label for="ticketFilterStatus">Status:</label>
+            <select id="ticketFilterStatus" class="select-control">
+              <option value="">All Statuses</option>
+              <option value="Open">Open</option>
+              <option value="Resolved">Resolved</option>
+              <option value="Escalated">Escalated</option>
+            </select>
+          </div>
+
+          <button id="resetTicketFiltersBtn" class="btn-secondary">Reset Filters</button>
+        </div>
+
+        <!-- Ticket Table -->
+        <div class="table-scroll-wrap">
+          <table class="enterprise-table" id="ticketsTable">
+            <thead>
+              <tr>
+                <th class="sortable" data-sort="ticket_id">Ticket ID <span class="sort-icon">&#9650;&#9660;</span></th>
+                <th class="sortable" data-sort="created_at">Created At <span class="sort-icon">&#9650;&#9660;</span></th>
+                <th>Category</th>
+                <th class="sortable" data-sort="priority">Priority <span class="sort-icon">&#9650;&#9660;</span></th>
+                <th>Status</th>
+                <th class="sortable" data-sort="response_time_hrs">Resp (hrs) <span class="sort-icon">&#9650;&#9660;</span></th>
+                <th class="sortable" data-sort="resolution_time_hrs">Resol (hrs) <span class="sort-icon">&#9650;&#9660;</span></th>
+                <th class="sortable" data-sort="customer_rating">Rating <span class="sort-icon">&#9650;&#9660;</span></th>
+                <th>Agent</th>
+                <th>Issue Summary</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="ticketsTableBody">
+              <tr><td colspan="11" class="text-center">Loading ticket records from SQLite...</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination Toolbar -->
+        <div class="pagination-toolbar">
+          <div class="page-counter-text" id="paginationInfo">Showing 1–15 of 500 records</div>
+          <div class="page-btn-group">
+            <label for="pageSizeSelect" style="font-size: 0.8rem; color: var(--text-muted);">Rows per page:</label>
+            <select id="pageSizeSelect" class="select-control" style="padding: 3px 8px; margin-right: 12px;">
+              <option value="15" selected>15</option>
+              <option value="25">25</option>
+              <option value="50">50</option>
+            </select>
+            <button id="prevPageBtn" class="page-nav-btn" disabled>&larr; Previous</button>
+            <span class="page-counter-text" id="pageIndicator" style="font-weight: 600;">Page 1</span>
+            <button id="nextPageBtn" class="page-nav-btn">Next &rarr;</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================================================================
+         TAB 5: System Telemetry & Architecture Walkthrough
+         ================================================================== -->
+    <section class="tab-panel" id="tabSystem">
+      <div class="enterprise-card">
+        <div class="card-header-bar">
+          <div class="card-title-group">
+            <h2>System Health &amp; Runtime Telemetry</h2>
+            <span class="tag-badge tag-low">Zero-Cost Setup</span>
+          </div>
+        </div>
+        <div class="card-body-padding">
+          <div class="two-column-grid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 24px;">
+            <div style="background: var(--bg-subtle); padding: 18px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+              <h4 style="font-size: 0.95rem; margin-bottom: 12px; color: var(--text-primary); font-weight: 700;">Database Subsystem</h4>
+              <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 8px;"><strong>Engine:</strong> SQLite 3 with B-Tree Indexes</p>
+              <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 8px;"><strong>Path:</strong> <code>data/support_tickets.db</code></p>
+              <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 8px;"><strong>Indexed Fields:</strong> <code>status</code>, <code>priority</code>, <code>category</code>, <code>agent_id</code>, <code>created_at</code></p>
+              <p style="font-size: 0.85rem; color: var(--text-secondary);"><strong>Records Loaded:</strong> 500 verified tickets</p>
+            </div>
+
+            <div style="background: var(--bg-subtle); padding: 18px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+              <h4 style="font-size: 0.95rem; margin-bottom: 12px; color: var(--text-primary); font-weight: 700;">AI Pipeline &amp; Multi-Tier LLM</h4>
+              <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 8px;"><strong>Active Provider:</strong> <span id="systemTelemetryProvider">Ollama</span></p>
+              <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 8px;"><strong>Active Model:</strong> <span id="systemTelemetryModel">qwen3:8b</span></p>
+              <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 8px;"><strong>Zero-Cost Free Tier:</strong> Groq Cloud (<code>llama-3.3-70b-versatile</code>)</p>
+              <p style="font-size: 0.85rem; color: var(--text-secondary);"><strong>Zero-Failure Fallback:</strong> High-precision deterministic NLP parser</p>
+            </div>
+          </div>
+
+          <!-- Interactive Architectural Flow Diagram -->
+          <h3 style="font-size: 1rem; margin-bottom: 10px; color: var(--text-primary);">&#128640; 6-Stage Deterministic Query Pipeline</h3>
+          <div class="arch-diagram-flow">
+            <div class="arch-node">
+              <div>
+                <div class="arch-node-title">1. User Natural Language Question</div>
+                <div class="arch-node-desc">Plain English question accepted via REST API (/query) or Web UI</div>
+              </div>
+              <span class="tag-badge tag-open">Stage 1</span>
+            </div>
+            <div class="arch-arrow-down">&darr;</div>
+
+            <div class="arch-node">
+              <div>
+                <div class="arch-node-title">2. Multi-Tier LLM Query Parsing</div>
+                <div class="arch-node-desc">Ollama/Groq extracts operations, filters, and aggregations into JSON schema (or deterministic fallback)</div>
+              </div>
+              <span class="tag-badge tag-category">Stage 2</span>
+            </div>
+            <div class="arch-arrow-down">&darr;</div>
+
+            <div class="arch-node">
+              <div>
+                <div class="arch-node-title">3. Pydantic QueryIntent Schema Validation &amp; Whitelisting</div>
+                <div class="arch-node-desc">Rejects invalid columns and prevents arbitrary SQL injection through strict enum whitelisting</div>
+              </div>
+              <span class="tag-badge tag-low">Stage 3</span>
+            </div>
+            <div class="arch-arrow-down">&darr;</div>
+
+            <div class="arch-node">
+              <div>
+                <div class="arch-node-title">4. Safe Parameterized SQLite Query Execution</div>
+                <div class="arch-node-desc">Executes bounded query over B-Tree indexed SQLite database; real calculations performed in DB</div>
+              </div>
+              <span class="tag-badge tag-resolved">Stage 4</span>
+            </div>
+            <div class="arch-arrow-down">&darr;</div>
+
+            <div class="arch-node">
+              <div>
+                <div class="arch-node-title">5. Verified Data-Backed Numerical Result</div>
+                <div class="arch-node-desc">Exact numerical values guaranteed by SQLite engine; zero hallucination possible</div>
+              </div>
+              <span class="tag-badge tag-low">Stage 5</span>
+            </div>
+            <div class="arch-arrow-down">&darr;</div>
+
+            <div class="arch-node">
+              <div>
+                <div class="arch-node-title">6. Natural Language Response &amp; Visual Audit</div>
+                <div class="arch-node-desc">Formatted human-readable answer returned with full parameter audit and execution metrics</div>
+              </div>
+              <span class="tag-badge tag-open">Stage 6</span>
+            </div>
+          </div>
+
+          <!-- Collapsible Interview Walkthrough Guide -->
+          <div class="interview-guide-box">
+            <div class="interview-guide-header" id="interviewGuideToggle">
+              <span>&#128172; 30-Minute Architecture Walkthrough Interview Guide (Click to Expand)</span>
+              <span id="interviewGuideArrow">&#9662;</span>
+            </div>
+            <div class="interview-guide-content hidden" id="interviewGuideBody">
+              <p><strong>Q1: Why did you not let the LLM generate SQL directly?</strong><br>
+              <em>Answer:</em> "Raw LLM-generated SQL creates severe SQL injection vulnerabilities, syntax unpredictability across database engines, and hallucinated calculations. Instead, our system uses the LLM solely as a semantic parser to output a strongly typed Pydantic <code>QueryIntent</code> AST. Parameterized queries are then safely compiled by Python, ensuring 100% data fidelity and zero hallucination."</p>
+
+              <p><strong>Q2: How does the system handle high load and scaling to millions of tickets?</strong><br>
+              <em>Answer:</em> "Our architecture separates read analytics from transactional ingestion. For millions of rows: (1) Replace SQLite with PostgreSQL or ClickHouse with columnar indexing; (2) Introduce Redis result caching for frequent queries; (3) Offload heavy statistical anomaly batch scans to Celery/Redis workers."</p>
+
+              <p><strong>Q3: How do you detect anomalies without expensive machine learning?</strong><br>
+              <em>Answer:</em> "We implement 4 statistical and business rule engines: (1) Tukey's IQR ($Q_3 + 1.5 \times \text{IQR}$) for resolution time outliers, robust against skewed distributions; (2) SLA breach engine for High/Critical tickets unresolved past 24 hours; (3) 95th-percentile thresholding for response latency; (4) CSAT floor alerting for ratings $\le 2$."</p>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 12px; margin-top: 20px;">
+            <button class="btn-primary" onclick="window.open('/docs', '_blank')">Open Interactive Swagger Docs &rarr;</button>
+            <button class="btn-secondary" onclick="reloadDatabase()">&#8635; Force Database Re-ingest</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ====================================================================
+       Ticket Detail Inspection Modal Dialog
+       ==================================================================== -->
+  <div class="modal-backdrop hidden" id="ticketModal" role="dialog" aria-modal="true">
+    <div class="modal-dialog">
+      <div class="modal-dialog-header">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span class="modal-ticket-id-tag" id="modalTicketId">TKT-001</span>
+          <h3 style="font-size: 1.1rem; font-weight: 700;">Ticket Inspection</h3>
+        </div>
+        <button class="btn-dismiss" id="closeModalBtn" aria-label="Close dialog">&times;</button>
+      </div>
+      <div class="modal-dialog-body" id="modalBody">
+        <!-- Injected via JavaScript -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div class="toast-notice hidden" id="toastMessage"></div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
