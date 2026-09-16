@@ -34,9 +34,9 @@ DOMAIN RULES:
 - "unresolved" means status is not "Resolved" (i.e. status != "Resolved" or status in ["Open", "Escalated"]).
 - "open" tickets specifically means status == "Open".
 - "resolved" tickets means status == "Resolved".
-- DATASET TIMEFRAME: The dataset is historical spanning Jan-Mar 2024. Do NOT inject current-year dates (e.g. 2026) for relative phrases like "this month" or "this week".
-- When grouping by agent for resolved tickets (e.g., "Which agent resolved the most tickets?"):
-  operation = "group_by", group_by = "agent_id", filters = [{"field": "status", "operator": "equals", "value": "Resolved"}], aggregation = {"function": "count", "field": "ticket_id"}, order_direction = "desc", limit = 3.
+- DATASET TIMEFRAME: The dataset is historical spanning Jan-Mar 2024. Do NOT inject current-year dates (e.g. 2026) for relative phrases like "this month" or "this week", and do NOT mark them as ambiguous. Treat questions like "Which agent resolved the most tickets this month?" or "Are there any anomalies in resolution times this week?" as valid queries over the dataset with is_ambiguous = false.
+- When grouping by agent for resolved tickets (e.g., "Which agent resolved the most tickets?" or "Which agent resolved the most tickets this month?"):
+  operation = "group_by", group_by = "agent_id", filters = [{"field": "status", "operator": "equals", "value": "Resolved"}], aggregation = {"function": "count", "field": "ticket_id"}, order_direction = "desc", limit = 3, is_ambiguous = false.
 - "lowest average customer rating by agent":
   operation = "group_by", group_by = "agent_id", filters = [{"field": "customer_rating", "operator": "is_not_null"}], aggregation = {"function": "avg", "field": "customer_rating"}, order_direction = "asc", limit = 1.
 - "anomalies in resolution times":

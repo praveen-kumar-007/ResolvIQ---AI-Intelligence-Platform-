@@ -1,0 +1,27 @@
+[Unit]
+Description=ResolvIQ Enterprise AI Support Ticket Analytics Platform
+After=network.target remote-fs.target
+Documentation=https://github.com/praveen-kumar-007/ResolvIQ---AI-Intelligence-Platform-
+
+[Service]
+Type=simple
+User=resolviq
+Group=resolviq
+WorkingDirectory=/opt/resolviq
+Environment="PATH=/opt/resolviq/.venv/bin:/usr/local/bin:/usr/bin"
+EnvironmentFile=/opt/resolviq/.env
+ExecStart=/opt/resolviq/.venv/bin/gunicorn -c /opt/resolviq/gunicorn_conf.py app.main:app
+ExecReload=/bin/kill -s HUP $MAINPID
+KillMode=mixed
+TimeoutStopSec=30
+PrivateTmp=true
+Restart=always
+RestartSec=5
+
+# Security Hardening
+ProtectSystem=full
+ProtectHome=true
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

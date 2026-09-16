@@ -135,13 +135,48 @@ flowchart TD
    APP_PORT=8000
    ```
 
-5. **Run the Application (Single Command)**:
-   ```bash
-   python run.py
-   ```
+5. **Run the Application**:
+   - **Development Mode (Auto-Reload)**:
+     ```bash
+     python run.py
+     ```
+   - **Production Mode (Multi-Worker Concurrency)**:
+     ```bash
+     python run.py --prod --workers 4
+     ```
    *The server starts at `http://localhost:8000`.*
    - **Web Dashboard**: Open [http://localhost:8000](http://localhost:8000)
    - **Interactive API Documentation**: Open [http://localhost:8000/docs](http://localhost:8000/docs)
+
+### Production Deployment Options
+
+#### Option A: Docker (Production Container)
+```bash
+# Build the production image
+docker build -t resolviq-platform:latest .
+
+# Run with persistent volume and health check
+docker run -d --name resolviq -p 8000:8000 -v $(pwd)/data:/app/data resolviq-platform:latest
+```
+
+#### Option B: Docker Compose (1-Command Orchestration)
+```bash
+# Start ResolvIQ in background
+docker compose up -d
+
+# Check service logs and health
+docker compose ps
+docker compose logs -f resolviq
+```
+
+#### Option C: Cloud PaaS (Render / Railway / Heroku / Vercel)
+- **Render**: Connect repository; `render.yaml` auto-provisions the web service.
+- **Railway / Heroku**: Built-in `Procfile` executes `uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 2`.
+- **Vercel**: Pre-configured serverless entrypoint via `vercel.json` and `api/index.py`.
+
+#### Option D: Linux VPS (Systemd + Nginx)
+- Deploy service unit: `cp deploy/resolviq.service /etc/systemd/system/ && systemctl enable --now resolviq`
+- Configure reverse proxy: `cp deploy/nginx.conf /etc/nginx/sites-available/resolviq && ln -s /etc/nginx/sites-available/resolviq /etc/nginx/sites-enabled/`
 
 ---
 

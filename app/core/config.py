@@ -18,14 +18,28 @@ class Settings(BaseSettings):
     database_path: str = "./data/support_tickets.db"
     csv_path: str = "./data/support_tickets.csv"
 
-    # Server Settings
+    # Server & Environment Settings
+    environment: str = "production"
     app_host: str = "0.0.0.0"
     app_port: int = 8000
+    workers: int = 2
     log_level: str = "INFO"
+    docs_enabled: bool = True
+    cors_origins: str = "*"
 
     # Anomaly Detection Parameters
     anomaly_response_percentile: float = 95.0
     anomaly_resolution_iqr_multiplier: float = 1.5
+
+    @property
+    def is_production(self) -> bool:
+        return self.environment.lower() == "production"
+
+    @property
+    def cors_origins_list(self) -> list[str]:
+        if not self.cors_origins or self.cors_origins.strip() == "*":
+            return ["*"]
+        return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
 
     model_config = SettingsConfigDict(
         env_file=".env",

@@ -6,6 +6,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
+from fastapi.middleware.gzip import GZipMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
+from starlette.responses import Response
+
 from app.api import anomalies, health, query, stats, tickets
 from app.core.config import get_settings
 from app.core.exceptions import AppBaseException, app_exception_handler
@@ -18,10 +23,27 @@ setup_logging(settings.log_level)
 logger = logging.getLogger("app.main")
 
 
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    """Inject enterprise security headers into all responses."""
+
+    async def dispatch(self, request: Request, call_next):
+        response: Response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+        if settings.is_production:
+            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        return response
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan: initialize database and verify runtime dependencies."""
-    logger.info("Starting ResolvIQ — Enterprise AI Support Ticket Analytics System...")
+    logger.info(
+        f"Starting ResolvIQ [{settings.environment.upper()}] — Enterprise AI Support Ticket Analytics System..."
+    )
 
     # Initialize data layer
     try:
@@ -53,14 +75,19 @@ app = FastAPI(
     ),
     version="1.0.0",
     lifespan=lifespan,
-    docs_url="/docs",
-    redoc_url="/redoc"
+    docs_url="/docs" if settings.docs_enabled else None,
+    redoc_url="/redoc" if settings.docs_enabled else None,
+    openapi_url="/openapi.json" if settings.docs_enabled else None,
 )
+
+# Production security & compression middlewares
+app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 # CORS configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.cors_origins_list,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -1,0 +1,59 @@
+version: "3.8"
+
+services:
+  resolviq:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: resolviq-platform
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-8000}:8000"
+    environment:
+      - ENVIRONMENT=production
+      - APP_HOST=0.0.0.0
+      - APP_PORT=8000
+      - WORKERS=${WORKERS:-2}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - LLM_PROVIDER=${LLM_PROVIDER:-ollama}
+      - LLM_MODEL=${LLM_MODEL:-qwen3:8b}
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://ollama:11434}
+      - GROQ_API_KEY=${GROQ_API_KEY:-}
+      - GROQ_MODEL=${GROQ_MODEL:-llama-3.3-70b-versatile}
+      - CORS_ORIGINS=${CORS_ORIGINS:-*}
+      - DOCS_ENABLED=${DOCS_ENABLED:-true}
+      - DATABASE_PATH=/app/data/support_tickets.db
+      - CSV_PATH=/app/data/support_tickets.csv
+    volumes:
+      - resolviq-data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 2048M
+        reservations:
+          cpus: "0.5"
+          memory: 512M
+
+  # Optional local Ollama service (start with: docker compose --profile local-llm up)
+  ollama:
+    image: ollama/ollama:latest
+    container_name: resolviq-ollama
+    restart: unless-stopped
+    profiles: ["local-llm"]
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-models:/root/.ollama
+
+volumes:
+  resolviq-data:
+    driver: local
+  ollama-models:
+    driver: local

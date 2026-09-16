@@ -97,7 +97,7 @@ class DateRange(BaseModel):
 
 class QueryIntent(BaseModel):
     """Strict schema for LLM-parsed query intent before execution."""
-    operation: QueryOperation
+    operation: Optional[QueryOperation] = QueryOperation.FILTER_LIST
     fields: List[AllowedColumn] = Field(default_factory=list)
     filters: List[FilterCondition] = Field(default_factory=list)
     aggregation: Optional[AggregationSpec] = None

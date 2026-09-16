@@ -1,0 +1,63 @@
+name: ResolvIQ CI/CD Pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  test:
+    name: Run Automated Tests
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run Pytest Test Suite
+        run: |
+          pytest -v --durations=0
+
+  docker-build:
+    name: Build & Verify Docker Image
+    needs: test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: false
+          tags: resolviq-platform:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Verify Container Run & Health
+        run: |
+          docker run -d --name resolviq-test -p 8000:8000 resolviq-platform:latest
+          sleep 5
+          docker ps
+          curl -f http://localhost:8000/health || (docker logs resolviq-test && exit 1)
+          docker stop resolviq-test

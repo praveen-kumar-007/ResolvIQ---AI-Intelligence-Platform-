@@ -1,0 +1,33 @@
+# Git & Version Control
+.git/
+.gitignore
+.github/
+
+# Python caches and virtual environments
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+
+# Testing & Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+tests/
+
+# Temporary, scratch, and IDE files
+.vscode/
+.idea/
+*.swp
+*.log
+scratch/
+
+# Large binaries / submission assessment documents
+*.docx
+*.pdf
+AI Intern - Assessment/
+build_submission_docs.py
+TEST_REPORT.md
+ASSESSMENT_ANSWERS.md
