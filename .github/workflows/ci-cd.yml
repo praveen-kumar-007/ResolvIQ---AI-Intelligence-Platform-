@@ -49,6 +49,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
+          load: true
           push: false
           tags: resolviq-platform:latest
           cache-from: type=gha
@@ -57,7 +58,6 @@ jobs:
       - name: Verify Container Run & Health
         run: |
           docker run -d --name resolviq-test -p 8000:8000 resolviq-platform:latest
-          sleep 5
           docker ps
-          curl -f http://localhost:8000/health || (docker logs resolviq-test && exit 1)
+          curl --retry 6 --retry-delay 2 --retry-connrefused -f http://localhost:8000/health || (docker logs resolviq-test && exit 1)
           docker stop resolviq-test
