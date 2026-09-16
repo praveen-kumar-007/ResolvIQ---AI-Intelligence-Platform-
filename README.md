@@ -169,10 +169,21 @@ docker compose ps
 docker compose logs -f resolviq
 ```
 
-#### Option C: Cloud PaaS (Render / Railway / Heroku / Vercel)
-- **Render**: Connect repository; `render.yaml` auto-provisions the web service.
-- **Railway / Heroku**: Built-in `Procfile` executes `uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 2`.
-- **Vercel**: Pre-configured serverless entrypoint via `vercel.json` and `api/index.py`.
+#### Option C: Vercel Cloud Serverless Deployment (Recommended)
+ResolvIQ is pre-configured for zero-friction serverless deployment on **Vercel**:
+1. Go to [Vercel Dashboard](https://vercel.com/new) and click **"Add New Project"**.
+2. Select and import your GitHub repository: `ResolvIQ---AI-Intelligence-Platform-`.
+3. Under **Environment Variables**, add:
+   - `ENVIRONMENT`: `production`
+   - `GROQ_API_KEY`: `gsk_your_groq_key_here` *(optional, for ~300ms cloud LLM inference; if omitted, ResolvIQ's instant deterministic fallback engine runs at <5ms)*
+   - `GROQ_MODEL`: `openai/gpt-oss-120b` *(or `llama-3.3-70b-versatile`)*
+   - `LLM_PROVIDER`: `groq` *(or `ollama`)*
+   - `DOCS_ENABLED`: `true`
+   - `CORS_ORIGINS`: `*`
+4. Click **Deploy**. Vercel will build the serverless functions via `@vercel/python` using `vercel.json` and `api/index.py`.
+5. Your application and web dashboard will be live at `https://<your-project>.vercel.app`.
+
+*Note: In Vercel serverless execution, ResolvIQ automatically copies and seeds the SQLite database into `/tmp/support_tickets.db` upon cold start.*
 
 #### Option D: Linux VPS (Systemd + Nginx)
 - Deploy service unit: `cp deploy/resolviq.service /etc/systemd/system/ && systemctl enable --now resolviq`
