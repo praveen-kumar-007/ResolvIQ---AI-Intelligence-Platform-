@@ -346,4 +346,40 @@ The entire system is verified by a 39-test automated suite executed via Pytest:
 * `tests/test_integration_ollama.py`: Validates live Ollama communication and fallback failover.
 * `tests/test_query.py`: Tests field whitelisting, SQL injection immunity, and group aggregations.
 
-**Result**: `39 passed in 9.04s (100% passing)`
+**Result**: `39 passed in 9.68s (100% passing)`
+
+---
+
+## Part 6: Production Deployment, Containerization & Cloud Serverless
+
+The platform is enterprise-hardened with production containerization, multi-worker concurrency, and cloud serverless integration:
+
+### 1. Docker Compose (1-Command Evaluator Startup)
+```bash
+# Spin up production platform with persistent SQLite data volume & health checks
+docker compose up -d
+
+# Verify operational status & telemetry
+docker compose ps
+curl http://localhost:8000/health
+
+# Teardown
+docker compose down
+```
+
+### 2. Production Docker Container (`Dockerfile`)
+- **Base Image**: Lightweight `python:3.11-slim` with minimal attack surface.
+- **Security**: Non-root system user `resolviq` (UID 10001).
+- **Health Checks**: Automated container-level healthcheck pinging `http://localhost:8000/health`.
+- **Command**: `uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2`
+
+### 3. Vercel Cloud Serverless Deployment
+- **Configuration**: Zero-friction deployment via `vercel.json` with `@vercel/python`.
+- **Ephemeral Storage Seeding**: [api/index.py](api/index.py) seeds the SQLite database into `/tmp/support_tickets.db` on cold start, preserving read/write access in serverless Lambda environments.
+- **Dashboard & Docs**: Both the web console (`/`) and Swagger UI (`/docs`) are fully functional on Vercel.
+
+### 4. Local Production CLI Runner
+```bash
+# Launch with 4 concurrent workers and disabled auto-reload
+python run.py --prod --workers 4
+```

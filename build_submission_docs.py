@@ -83,8 +83,10 @@ def create_report():
         "• Organization: DOTMappers IT Pvt. Ltd.\n"
         "• Recipient: Mr. Rajath Kumar (HR Lead) | RajathKumar@dotmappers.in\n"
         "• Subject Line: [AI Engineer Assessment] — Praveen Kumar\n"
-        "• System Execution: python run.py (Starts API & Web UI on http://localhost:8000)\n"
-        "• Test Verification: 39 Automated Test Cases Passed (100% Pass Rate in 7.90s)"
+        "• 1-Command Docker Startup: docker compose up -d (Accessible at http://localhost:8000)\n"
+        "• Local Python Execution: python run.py (Dev reload) or python run.py --prod --workers 4\n"
+        "• Cloud Serverless: Configured for Vercel deployment via vercel.json & api/index.py\n"
+        "• Test Verification: 39 Automated Test Cases Passed (100% Pass Rate in 9.68s)"
     )
     r2.font.size = Pt(9.5)
     r2.font.color.rgb = CHARCOAL
@@ -136,6 +138,7 @@ def create_report():
     add_body_p(" Translates arbitrary natural language queries into safe, structured JSON intents (QueryIntent) executed via parameterized SQL, providing complete immunity to SQL injection and zero hallucinations. Integrates multi-tier zero-cost LLMs (Ollama qwen3:8b, Groq llama-3.3-70b free-tier, and sub-5ms deterministic offline fallback).", bold_prefix="2. Natural Language Anomaly & Analytical Querying:")
     add_body_p(" Employs Tukey's Interquartile Range (IQR) outlier detection for resolution times, SLA age breach monitors (>24h unresolved high/critical tickets), 95th-percentile response time tracking, and low customer satisfaction drops (<=2/5).", bold_prefix="3. Multi-Engine Anomaly Detection:")
     add_body_p(" High-throughput REST API with OpenAPI Swagger UI (/docs) and a responsive, dark-mode glassmorphism web console featuring real-time KPI metrics, query console, anomaly scanner, and paginated ticket explorer.", bold_prefix="4. Dual Delivery (REST API + Web UI):")
+    add_body_p(" Enterprise-hardened with production Dockerfile (non-root resolviq user, security headers, GZip compression), docker-compose.yml with persistent SQLite volume and health checks, and Vercel serverless deployment support via api/index.py.", bold_prefix="5. Production Docker & Cloud Serverless:")
 
     # --- SECTION 2 ---
     add_section_header("2. Verified Assessment Answers & Query Catalog")
@@ -270,10 +273,24 @@ def create_report():
 
     # --- SECTION 6 ---
     add_section_header("6. Execution & Verification Instructions")
-    add_body_p("The entire platform can be run and tested by the evaluator using simple, standard commands:")
-    add_body_p("python run.py (Launches FastAPI backend and Web Dashboard at http://localhost:8000)", bold_prefix="• Start System: ")
-    add_body_p("http://localhost:8000/docs (Explore interactive OpenAPI Swagger catalog)", bold_prefix="• API Documentation: ")
-    add_body_p(".venv\\Scripts\\pytest -v --durations=0 (Runs all 39 automated tests)", bold_prefix="• Run Test Suite: ")
+    add_body_p("The entire platform can be run and verified by the evaluator using multiple flexible options:")
+
+    add_sub_header("Option A: Docker Compose (Recommended 1-Command Startup)")
+    add_body_p("docker compose up -d (Builds container, mounts persistent data volume, and starts at http://localhost:8000)", bold_prefix="• Run Compose: ")
+    add_body_p("docker compose ps && curl http://localhost:8000/health (Confirms container status and telemetry)", bold_prefix="• Verify Health: ")
+    add_body_p("docker compose down (Gracefully stops all containers)", bold_prefix="• Teardown: ")
+
+    add_sub_header("Option B: Docker Single Container")
+    add_body_p("docker build -t resolviq-platform:latest .", bold_prefix="• Build Image: ")
+    add_body_p("docker run -d --name resolviq -p 8000:8000 -v $(pwd)/data:/app/data resolviq-platform:latest", bold_prefix="• Run Container: ")
+
+    add_sub_header("Option C: Native Local Python")
+    add_body_p("python run.py (Starts with auto-reload at http://localhost:8000)", bold_prefix="• Dev Mode: ")
+    add_body_p("python run.py --prod --workers 4 (Starts production server with 4 concurrent workers)", bold_prefix="• Production Mode: ")
+    add_body_p(".venv\\Scripts\\pytest -v --durations=0 (Executes all 39 automated Pytest test cases)", bold_prefix="• Run Test Suite: ")
+
+    add_sub_header("Option D: Cloud Serverless (Vercel)")
+    add_body_p("Pre-configured for zero-friction serverless deployment via vercel.json and api/index.py, automatically copying and seeding the SQLite database into /tmp/support_tickets.db upon cold start.", bold_prefix="• Vercel Deployment: ")
 
     output_path = Path("DOTMappers_AI_Engineer_Assessment_Report.docx").resolve()
     doc.save(str(output_path))

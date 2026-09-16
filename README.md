@@ -6,6 +6,9 @@
 
   [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/)
   [![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688.svg)](https://fastapi.tiangolo.com/)
+  [![Docker](https://img.shields.io/badge/Docker-Containerized-2496ED.svg)](Dockerfile)
+  [![Docker Compose](https://img.shields.io/badge/Docker%20Compose-v3.8-2496ED.svg)](docker-compose.yml)
+  [![Vercel](https://img.shields.io/badge/Vercel-Serverless%20Ready-000000.svg)](vercel.json)
   [![SQLite](https://img.shields.io/badge/SQLite-B--Tree%20Indexed-003B57.svg)](https://www.sqlite.org/)
   [![Tests](https://img.shields.io/badge/tests-39%20passed%20(100%25)-success.svg)](tests/)
   [![Zero Cost](https://img.shields.io/badge/LLM-Zero--Cost%20Verified-green.svg)](README.md)
@@ -28,8 +31,9 @@
 3. **Dual Interface**:
    - **REST API**: Built with FastAPI, including interactive Swagger docs at `/docs`.
    - **Web UI**: Modern, responsive dark-mode dashboard featuring KPI cards, interactive AI query console, multi-parameter anomaly scanner, paginated Ticket Explorer, and inspection modals.
-4. **Single-Command Startup**: Fully self-contained, starts with `python run.py`.
+4. **Single-Command Startup**: Fully self-contained, starts with `python run.py` (or 1-command `docker compose up -d`).
 5. **Comprehensive Test Suite**: 39 automated Pytest test cases validating all contracts, queries, and edge cases (100% passing).
+6. **Enterprise Containerization & Cloud Serverless**: Production Docker container (`Dockerfile`) with non-root security (`resolviq`), multi-worker concurrency, 1-command Docker Compose orchestration (`docker compose up -d`), and seamless Vercel Serverless deployment with automated cold-start database seeding in `/tmp`.
 
 ---
 
@@ -88,12 +92,23 @@ flowchart TD
 
 ## 4. Quickstart & Setup Guide
 
-### Prerequisites
+> [!TIP]
+> ### ⚡ Fastest Evaluation Option: Docker Compose (1 Single Command)
+> If you have Docker installed, spin up the entire production-hardened platform in seconds with zero Python environment setup:
+> ```bash
+> docker compose up -d
+> ```
+> * **Interactive Web Dashboard**: Open [http://localhost:8000](http://localhost:8000)
+> * **Swagger OpenAPI Documentation**: Open [http://localhost:8000/docs](http://localhost:8000/docs)
+> * **System Health Telemetry**: `curl http://localhost:8000/health`
+> * **Graceful Teardown**: `docker compose down`
+
+### Prerequisites (for Local Python Execution)
 - Python 3.10, 3.11, 3.12, or 3.13 installed.
 - (Optional for Local LLM) [Ollama](https://ollama.ai) installed with `ollama pull qwen3:8b`.
 - (Optional for Cloud LLM) Free [Groq API Key](https://console.groq.com/keys).
 
-### Installation (Step-by-Step)
+### Local Installation (Step-by-Step)
 
 1. **Clone or Navigate to the Repository**:
    ```bash
