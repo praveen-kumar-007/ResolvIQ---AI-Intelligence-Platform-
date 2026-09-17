@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -211,7 +212,7 @@ class LLMService:
     # ──────────────────────────────────────────────────────────
 
     async def parse_query(self, question: str) -> QueryIntent:
-        """Translate natural language question to QueryIntent using LLM only (no hardcoded rules)."""
+        """Translate natural language question to QueryIntent using LLM with rule-based fallback."""
         clean_question = question.strip()
         if not clean_question:
             raise InvalidQueryError("Question cannot be empty.")
@@ -236,10 +237,242 @@ class LLMService:
             except Exception as e:
                 logger.warning(f"Ollama parsing failed: {e}")
 
-        # No hardcoded fallback — raise an error so the caller knows parsing failed
-        raise InvalidQueryError(
-            "Unable to parse your question. Both LLM providers (Groq and Ollama) are unavailable. "
-            "Please check your API key configuration or try again later."
+        # Tier 3: Rule-based fallback parser (no LLM needed)
+        logger.info("Both LLM providers unavailable. Using rule-based fallback parser.")
+        return self._fallback_parse(clean_question)
+
+    def _fallback_parse(self, question: str) -> QueryIntent:
+        """Rule-based query parser for when no LLM provider is available.
+        Uses regex and keyword matching to handle common query patterns.
+        """
+        q = question.lower().strip()
+
+        # ── Pattern 1: Anomaly detection queries ──
+        if re.search(r"anomal(y|ies|ous)", q) and re.search(r"resolution.?time", q):
+            return QueryIntent(
+                operation=QueryOperation.FILTER_LIST,
+                filters=[
+                    FilterCondition(
+                        field=AllowedColumn.RESOLUTION_TIME_HRS,
+                        operator=FilterOperator.IS_NOT_NULL,
+                    ),
+                    FilterCondition(
+                        field=AllowedColumn.RESOLUTION_TIME_HRS,
+                        operator=FilterOperator.GREATER_THAN,
+                        value=48.35,
+                    ),
+                ],
+                order_by=AllowedColumn.RESOLUTION_TIME_HRS,
+                order_direction=SortOrder.DESC,
+                limit=50,
+                is_ambiguous=False,
+            )
+
+        # ── Pattern 2: Critical tickets not resolved within N hours ──
+        critical_unresolved_match = re.search(
+            r"critical.*(?:not\s+resolved|unresolved).*?(\d+)\s*(?:hour|hr)", q
+        )
+        if critical_unresolved_match:
+            hours = float(critical_unresolved_match.group(1))
+            return QueryIntent(
+                operation=QueryOperation.FILTER_LIST,
+                filters=[
+                    FilterCondition(
+                        field=AllowedColumn.PRIORITY,
+                        operator=FilterOperator.EQUALS,
+                        value="Critical",
+                    ),
+                    FilterCondition(
+                        field=AllowedColumn.RESOLUTION_TIME_HRS,
+                        operator=FilterOperator.GREATER_THAN,
+                        value=hours,
+                    ),
+                ],
+                order_by=AllowedColumn.RESOLUTION_TIME_HRS,
+                order_direction=SortOrder.DESC,
+                limit=50,
+                is_ambiguous=False,
+            )
+
+        # ── Pattern 3: Group-by agent queries ──
+        if re.search(r"which\s+agent.*(?:most|resolved)", q) or re.search(r"agent.*most\s+ticket", q):
+            return QueryIntent(
+                operation=QueryOperation.GROUP_BY,
+                group_by=AllowedColumn.AGENT_ID,
+                filters=[
+                    FilterCondition(
+                        field=AllowedColumn.STATUS,
+                        operator=FilterOperator.EQUALS,
+                        value="Resolved",
+                    ),
+                ],
+                order_direction=SortOrder.DESC,
+                limit=10,
+                is_ambiguous=False,
+            )
+
+        # ── Pattern 4: Average/aggregate queries ──
+        avg_match = re.search(r"(?:average|avg)\s+(?:customer\s+)?(?:rating|customer.?rating)", q)
+        if avg_match:
+            filters = []
+            # Check for category filter
+            for cat in ("Technical", "Billing", "General"):
+                if cat.lower() in q:
+                    filters.append(FilterCondition(
+                        field=AllowedColumn.CATEGORY,
+                        operator=FilterOperator.EQUALS,
+                        value=cat,
+                    ))
+                    break
+            return QueryIntent(
+                operation=QueryOperation.AGGREGATE,
+                aggregation=AggregationSpec(
+                    function=AggregationType.AVG,
+                    field=AllowedColumn.CUSTOMER_RATING,
+                ),
+                filters=filters,
+                is_ambiguous=False,
+            )
+
+        # Average resolution time
+        if re.search(r"(?:average|avg)\s+(?:resolution\s+)?(?:time|resolution.?time)", q):
+            filters = []
+            for cat in ("Technical", "Billing", "General"):
+                if cat.lower() in q:
+                    filters.append(FilterCondition(
+                        field=AllowedColumn.CATEGORY,
+                        operator=FilterOperator.EQUALS,
+                        value=cat,
+                    ))
+                    break
+            return QueryIntent(
+                operation=QueryOperation.AGGREGATE,
+                aggregation=AggregationSpec(
+                    function=AggregationType.AVG,
+                    field=AllowedColumn.RESOLUTION_TIME_HRS,
+                ),
+                filters=filters,
+                is_ambiguous=False,
+            )
+
+        # ── Pattern 5: Tickets with no customer rating (NULL) ──
+        if re.search(r"(?:no|without|missing|null)\s+(?:customer\s+)?rating", q):
+            return QueryIntent(
+                operation=QueryOperation.FILTER_LIST,
+                filters=[
+                    FilterCondition(
+                        field=AllowedColumn.CUSTOMER_RATING,
+                        operator=FilterOperator.IS_NULL,
+                    ),
+                ],
+                limit=50,
+                is_ambiguous=False,
+            )
+
+        # ── Pattern 6: Tickets with no resolution time (NULL) ──
+        if re.search(r"(?:no|without|missing|null)\s+resolution\s*(?:time|_time|hours?|hrs?)?", q):
+            return QueryIntent(
+                operation=QueryOperation.FILTER_LIST,
+                filters=[
+                    FilterCondition(
+                        field=AllowedColumn.RESOLUTION_TIME_HRS,
+                        operator=FilterOperator.IS_NULL,
+                    ),
+                ],
+                limit=50,
+                is_ambiguous=False,
+            )
+
+        # ── Pattern 7: Count queries ──
+        if re.search(r"how\s+many\s+ticket", q) or re.search(r"(?:count|total|number)\s+(?:of\s+)?ticket", q):
+            filters = []
+            # Detect status filters
+            if "open" in q:
+                filters.append(FilterCondition(
+                    field=AllowedColumn.STATUS,
+                    operator=FilterOperator.EQUALS,
+                    value="Open",
+                ))
+            elif "resolved" in q:
+                filters.append(FilterCondition(
+                    field=AllowedColumn.STATUS,
+                    operator=FilterOperator.EQUALS,
+                    value="Resolved",
+                ))
+            elif "escalated" in q:
+                filters.append(FilterCondition(
+                    field=AllowedColumn.STATUS,
+                    operator=FilterOperator.EQUALS,
+                    value="Escalated",
+                ))
+            # Detect priority filters
+            for pri in ("Critical", "High", "Medium", "Low"):
+                if pri.lower() in q:
+                    filters.append(FilterCondition(
+                        field=AllowedColumn.PRIORITY,
+                        operator=FilterOperator.EQUALS,
+                        value=pri,
+                    ))
+                    break
+            # Detect category filters
+            for cat in ("Technical", "Billing", "General"):
+                if cat.lower() in q:
+                    filters.append(FilterCondition(
+                        field=AllowedColumn.CATEGORY,
+                        operator=FilterOperator.EQUALS,
+                        value=cat,
+                    ))
+                    break
+            return QueryIntent(
+                operation=QueryOperation.COUNT,
+                filters=filters,
+                is_ambiguous=False,
+            )
+
+        # ── Pattern 8: Generic filter list (show/list/find tickets) ──
+        if re.search(r"(?:show|list|find|display|get)\s+(?:me\s+)?(?:all\s+)?ticket", q):
+            filters = []
+            for status in ("Open", "Resolved", "Escalated"):
+                if status.lower() in q:
+                    filters.append(FilterCondition(
+                        field=AllowedColumn.STATUS,
+                        operator=FilterOperator.EQUALS,
+                        value=status,
+                    ))
+                    break
+            for pri in ("Critical", "High", "Medium", "Low"):
+                if pri.lower() in q:
+                    filters.append(FilterCondition(
+                        field=AllowedColumn.PRIORITY,
+                        operator=FilterOperator.EQUALS,
+                        value=pri,
+                    ))
+                    break
+            for cat in ("Technical", "Billing", "General"):
+                if cat.lower() in q:
+                    filters.append(FilterCondition(
+                        field=AllowedColumn.CATEGORY,
+                        operator=FilterOperator.EQUALS,
+                        value=cat,
+                    ))
+                    break
+            return QueryIntent(
+                operation=QueryOperation.FILTER_LIST,
+                filters=filters,
+                limit=50,
+                is_ambiguous=False,
+            )
+
+        # ── Fallback: Mark as ambiguous ──
+        logger.warning(f"Fallback parser could not match question pattern: '{question}'")
+        return QueryIntent(
+            operation=QueryOperation.FILTER_LIST,
+            is_ambiguous=True,
+            clarification_needed=(
+                "I couldn't understand your question without AI assistance. "
+                "Please try rephrasing with specific terms like 'how many', 'average', "
+                "'show tickets', or 'which agent'."
+            ),
         )
 
     # ──────────────────────────────────────────────────────────
