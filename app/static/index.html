@@ -365,43 +365,101 @@
               <div id="overviewFiltersList" class="filters-chips-container"></div>
             </div>
 
-            <!-- Technical Architecture & SQL Audit Accordion -->
-            <div class="tech-inspector-toggle" id="overviewTechToggle">
-              <div class="toggle-label-wrap">
-                <span class="toggle-icon">&#9881;</span>
-                <span class="toggle-text">Inspect Technical Architecture &amp; Compiled SQL</span>
-                <span class="toggle-badge">Zero-Hallucination Audit</span>
-              </div>
-              <span id="overviewTechArrow" class="toggle-arrow">&#9662;</span>
+            <!-- Action Trigger Cards: View SQL & View Data -->
+            <div class="inspector-action-cards-grid">
+              <button type="button" class="inspector-action-card" id="overviewBtnViewSql">
+                <div class="action-card-left">
+                  <div class="action-card-icon icon-sql">&#60;/&#62;</div>
+                  <div class="action-card-info">
+                    <span class="action-card-title">Generated SQL Query</span>
+                    <span class="action-card-sub">Safe Parameterized SQLite Statement</span>
+                  </div>
+                </div>
+                <div class="action-card-right">
+                  <span class="action-card-badge">Show Code <span class="arrow-indicator">&#9662;</span></span>
+                </div>
+              </button>
+
+              <button type="button" class="inspector-action-card" id="overviewBtnViewData">
+                <div class="action-card-left">
+                  <div class="action-card-icon icon-data">&#128202;</div>
+                  <div class="action-card-info">
+                    <span class="action-card-title">Matching Data Records</span>
+                    <span class="action-card-sub" id="overviewActionDataSub">Tabular records found</span>
+                  </div>
+                </div>
+                <div class="action-card-right">
+                  <span class="action-card-badge" id="overviewDataCountBadge">0 records <span class="arrow-indicator">&#9662;</span></span>
+                </div>
+              </button>
             </div>
-            <div class="tech-inspector-body hidden" id="overviewTechBody">
-              <div class="inspector-card">
-                <div class="inspector-card-header">
-                  <span class="inspector-section-label">Safe Parameterized SQLite Query Executed</span>
-                  <button class="btn-code-copy" id="overviewCopySqlBtn" title="Copy SQL statement">Copy SQL</button>
+
+            <!-- Expandable Unified Technical & Data Hub -->
+            <div class="tech-inspector-hub hidden" id="overviewTechBody">
+              <!-- Tab Bar inside Hub -->
+              <div class="inspector-hub-header">
+                <div class="hub-tabs-list">
+                  <button type="button" class="hub-tab-btn active" data-tab="sql" id="overviewTabBtnSql">
+                    <span class="hub-tab-icon">&#60;/&#62;</span>
+                    <span>SQL Statement</span>
+                  </button>
+                  <button type="button" class="hub-tab-btn" data-tab="data" id="overviewTabBtnData">
+                    <span class="hub-tab-icon">&#128202;</span>
+                    <span>Result Data Table</span>
+                    <span class="hub-tab-counter" id="overviewHubDataCounter">0</span>
+                  </button>
+                  <button type="button" class="hub-tab-btn" data-tab="ast" id="overviewTabBtnAst">
+                    <span class="hub-tab-icon">&#9881;</span>
+                    <span>QueryIntent AST</span>
+                  </button>
                 </div>
-                <div class="code-block-display" id="overviewSqlExecuted">--</div>
+                <button type="button" class="btn-hub-close" id="overviewHubCloseBtn" title="Collapse Inspector">&times; Close</button>
               </div>
-              <div class="inspector-card">
-                <div class="inspector-section-label">Bound Execution Parameters</div>
-                <div class="code-block-display font-mono" id="overviewSqlParams">[]</div>
-              </div>
-              <div class="inspector-card">
-                <div class="inspector-section-label">Validated Pydantic QueryIntent AST</div>
-                <div class="code-block-display font-mono" id="overviewQueryIntentJson">{}</div>
-              </div>
-              <div class="inspector-card" id="overviewResultsCard">
-                <div class="inspector-card-header">
-                  <span class="inspector-section-label">Raw Query Results</span>
-                  <span class="inspector-result-count" id="overviewResultCount">0 records</span>
+
+              <!-- Panel 1: SQL Code & Bindings -->
+              <div class="hub-tab-panel" id="overviewPanelSql">
+                <div class="inspector-card">
+                  <div class="inspector-card-header">
+                    <span class="inspector-section-label">Safe Parameterized SQLite Query Executed</span>
+                    <button class="btn-code-copy" id="overviewCopySqlBtn" title="Copy SQL statement">&#128203; Copy SQL</button>
+                  </div>
+                  <div class="code-block-display" id="overviewSqlExecuted">--</div>
                 </div>
-                <div class="inspector-results-table-wrap" id="overviewResultsTableWrap">
-                  <table class="inspector-results-table" id="overviewResultsTable">
-                    <thead id="overviewResultsHead"></thead>
-                    <tbody id="overviewResultsBody"></tbody>
-                  </table>
+                <div class="inspector-card">
+                  <div class="inspector-section-label">Bound Execution Parameters</div>
+                  <div class="code-block-display font-mono" id="overviewSqlParams">[]</div>
                 </div>
-                <div class="inspector-no-results hidden" id="overviewNoResults">No tabular data returned for this query type.</div>
+              </div>
+
+              <!-- Panel 2: Data Records Table -->
+              <div class="hub-tab-panel hidden" id="overviewPanelData">
+                <div class="inspector-card" id="overviewResultsCard">
+                  <div class="inspector-card-header">
+                    <span class="inspector-section-label">Filtered Data Records</span>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                      <span class="inspector-result-count" id="overviewResultCount">0 records</span>
+                      <button class="btn-code-copy" id="overviewExportCsvBtn" title="Export to CSV">&#128229; Export CSV</button>
+                    </div>
+                  </div>
+                  <div class="inspector-results-table-wrap" id="overviewResultsTableWrap">
+                    <table class="inspector-results-table" id="overviewResultsTable">
+                      <thead id="overviewResultsHead"></thead>
+                      <tbody id="overviewResultsBody"></tbody>
+                    </table>
+                  </div>
+                  <div class="inspector-no-results hidden" id="overviewNoResults">No tabular data returned for this query type.</div>
+                </div>
+              </div>
+
+              <!-- Panel 3: QueryIntent AST -->
+              <div class="hub-tab-panel hidden" id="overviewPanelAst">
+                <div class="inspector-card">
+                  <div class="inspector-card-header">
+                    <span class="inspector-section-label">Validated Pydantic QueryIntent Schema</span>
+                    <span class="toggle-badge">Zero-Hallucination AST</span>
+                  </div>
+                  <div class="code-block-display font-mono" id="overviewQueryIntentJson">{}</div>
+                </div>
               </div>
             </div>
           </div>
@@ -566,48 +624,99 @@
               <div id="studioFiltersList" class="filters-chips-container"></div>
             </div>
 
-            <!-- Technical Architecture & SQL Audit Accordion -->
-            <div class="tech-inspector-toggle" id="studioTechToggle">
-              <div class="toggle-label-wrap">
-                <span class="toggle-icon">&#9881;</span>
-                <span class="toggle-text">Technical Architecture &amp; SQL Query Audit</span>
-                <span class="toggle-badge">Zero Hallucination Proof</span>
-              </div>
-              <span id="studioTechArrow" class="toggle-arrow">&#9662;</span>
-            </div>
-            <div class="tech-inspector-body hidden" id="studioTechBody">
-              <div class="inspector-card">
-                <div class="inspector-card-header">
-                  <span class="inspector-section-label">Safe Parameterized SQLite Query Executed</span>
-                  <button class="btn-code-copy" id="studioCopySqlBtn" title="Copy SQL statement">Copy SQL</button>
+            <!-- Action Trigger Cards: View SQL & View Data -->
+            <div class="inspector-action-cards-grid">
+              <button type="button" class="inspector-action-card" id="studioBtnViewSql">
+                <div class="action-card-left">
+                  <div class="action-card-icon icon-sql">&#60;/&#62;</div>
+                  <div class="action-card-info">
+                    <span class="action-card-title">Generated SQL Query</span>
+                    <span class="action-card-sub">Safe Parameterized SQLite Statement</span>
+                  </div>
                 </div>
-                <div class="code-block-display" id="studioSqlExecuted">--</div>
-              </div>
-              <div class="inspector-card">
-                <div class="inspector-section-label">Bound Parameters</div>
-                <div class="code-block-display font-mono" id="studioSqlParams">[]</div>
-              </div>
-              <div class="inspector-card">
-                <div class="inspector-section-label">Validated Pydantic QueryIntent AST</div>
-                <div class="code-block-display font-mono" id="studioQueryIntentJson">{}</div>
-              </div>
+                <div class="action-card-right">
+                  <span class="action-card-badge">Show Code <span class="arrow-indicator">&#9662;</span></span>
+                </div>
+              </button>
+
+              <button type="button" class="inspector-action-card" id="studioBtnViewData">
+                <div class="action-card-left">
+                  <div class="action-card-icon icon-data">&#128202;</div>
+                  <div class="action-card-info">
+                    <span class="action-card-title">Matching Data Records</span>
+                    <span class="action-card-sub" id="studioActionDataSub">Tabular records found</span>
+                  </div>
+                </div>
+                <div class="action-card-right">
+                  <span class="action-card-badge" id="studioDataCountBadge">0 records <span class="arrow-indicator">&#9662;</span></span>
+                </div>
+              </button>
             </div>
 
-            <!-- Dynamic Result Table -->
-            <div class="table-scroll-wrap hidden" id="studioDataTableWrap">
-              <div class="dataset-preview-header">
-                <div class="preview-title-group">
-                  <span class="preview-icon">&#128202;</span>
-                  <span class="preview-title">Result Dataset Records</span>
+            <!-- Expandable Unified Technical & Data Hub -->
+            <div class="tech-inspector-hub hidden" id="studioTechBody">
+              <!-- Tab Bar inside Hub -->
+              <div class="inspector-hub-header">
+                <div class="hub-tabs-list">
+                  <button type="button" class="hub-tab-btn active" data-tab="sql" id="studioTabBtnSql">
+                    <span class="hub-tab-icon">&#60;/&#62;</span>
+                    <span>SQL Statement</span>
+                  </button>
+                  <button type="button" class="hub-tab-btn" data-tab="data" id="studioTabBtnData">
+                    <span class="hub-tab-icon">&#128202;</span>
+                    <span>Result Data Table</span>
+                    <span class="hub-tab-counter" id="studioHubDataCounter">0</span>
+                  </button>
+                  <button type="button" class="hub-tab-btn" data-tab="ast" id="studioTabBtnAst">
+                    <span class="hub-tab-icon">&#9881;</span>
+                    <span>QueryIntent AST</span>
+                  </button>
                 </div>
-                <button class="btn-secondary btn-icon-label" id="studioExportCsvBtn">
-                  <span>&#128229;</span> Export Table (CSV)
-                </button>
+                <button type="button" class="btn-hub-close" id="studioHubCloseBtn" title="Collapse Inspector">&times; Close</button>
               </div>
-              <table class="enterprise-table" id="studioDataTable">
-                <thead id="studioTableHead"></thead>
-                <tbody id="studioTableBody"></tbody>
-              </table>
+
+              <!-- Panel 1: SQL Code & Bindings -->
+              <div class="hub-tab-panel" id="studioPanelSql">
+                <div class="inspector-card">
+                  <div class="inspector-card-header">
+                    <span class="inspector-section-label">Safe Parameterized SQLite Query Executed</span>
+                    <button class="btn-code-copy" id="studioCopySqlBtn" title="Copy SQL statement">&#128203; Copy SQL</button>
+                  </div>
+                  <div class="code-block-display" id="studioSqlExecuted">--</div>
+                </div>
+                <div class="inspector-card">
+                  <div class="inspector-section-label">Bound Parameters</div>
+                  <div class="code-block-display font-mono" id="studioSqlParams">[]</div>
+                </div>
+              </div>
+
+              <!-- Panel 2: Data Records Table -->
+              <div class="hub-tab-panel hidden" id="studioPanelData">
+                <div class="dataset-preview-header" style="margin-bottom: 8px;">
+                  <div class="preview-title-group">
+                    <span class="preview-icon">&#128202;</span>
+                    <span class="preview-title">Result Dataset Records</span>
+                  </div>
+                  <button class="btn-code-copy" id="studioExportCsvBtn" title="Export to CSV">&#128229; Export CSV</button>
+                </div>
+                <div class="table-scroll-wrap" id="studioDataTableWrap">
+                  <table class="enterprise-table" id="studioDataTable">
+                    <thead id="studioTableHead"></thead>
+                    <tbody id="studioTableBody"></tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- Panel 3: QueryIntent AST -->
+              <div class="hub-tab-panel hidden" id="studioPanelAst">
+                <div class="inspector-card">
+                  <div class="inspector-card-header">
+                    <span class="inspector-section-label">Validated Pydantic QueryIntent AST</span>
+                    <span class="toggle-badge">Zero-Hallucination AST</span>
+                  </div>
+                  <div class="code-block-display font-mono" id="studioQueryIntentJson">{}</div>
+                </div>
+              </div>
             </div>
           </div>
         </div>

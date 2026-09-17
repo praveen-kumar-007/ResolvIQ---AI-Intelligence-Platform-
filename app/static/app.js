@@ -46,9 +46,20 @@ const overviewAnswerText = document.getElementById('overviewAnswerText');
 const overviewCopyAnswerBtn = document.getElementById('overviewCopyAnswerBtn');
 const overviewFiltersWrap = document.getElementById('overviewFiltersWrap');
 const overviewFiltersList = document.getElementById('overviewFiltersList');
-const overviewTechToggle = document.getElementById('overviewTechToggle');
+const overviewBtnViewSql = document.getElementById('overviewBtnViewSql');
+const overviewBtnViewData = document.getElementById('overviewBtnViewData');
+const overviewActionDataSub = document.getElementById('overviewActionDataSub');
+const overviewDataCountBadge = document.getElementById('overviewDataCountBadge');
 const overviewTechBody = document.getElementById('overviewTechBody');
-const overviewTechArrow = document.getElementById('overviewTechArrow');
+const overviewHubCloseBtn = document.getElementById('overviewHubCloseBtn');
+const overviewTabBtnSql = document.getElementById('overviewTabBtnSql');
+const overviewTabBtnData = document.getElementById('overviewTabBtnData');
+const overviewTabBtnAst = document.getElementById('overviewTabBtnAst');
+const overviewHubDataCounter = document.getElementById('overviewHubDataCounter');
+const overviewPanelSql = document.getElementById('overviewPanelSql');
+const overviewPanelData = document.getElementById('overviewPanelData');
+const overviewPanelAst = document.getElementById('overviewPanelAst');
+const overviewExportCsvBtn = document.getElementById('overviewExportCsvBtn');
 const overviewSqlExecuted = document.getElementById('overviewSqlExecuted');
 const overviewSqlParams = document.getElementById('overviewSqlParams');
 const overviewQueryIntentJson = document.getElementById('overviewQueryIntentJson');
@@ -62,6 +73,7 @@ const overviewThinkingState = document.getElementById('overviewThinkingState');
 const overviewTimer = document.getElementById('overviewTimer');
 const overviewAnswerBanner = document.getElementById('overviewAnswerBanner');
 const overviewCopySqlBtn = document.getElementById('overviewCopySqlBtn');
+let currentOverviewResultData = null;
 
 // DOM Elements: Tab 2 (Studio)
 const studioQueryForm = document.getElementById('studioQueryForm');
@@ -78,9 +90,19 @@ const studioCopyAnswerBtn = document.getElementById('studioCopyAnswerBtn');
 const studioCopyJsonBtn = document.getElementById('studioCopyJsonBtn');
 const studioFiltersWrap = document.getElementById('studioFiltersWrap');
 const studioFiltersList = document.getElementById('studioFiltersList');
-const studioTechToggle = document.getElementById('studioTechToggle');
+const studioBtnViewSql = document.getElementById('studioBtnViewSql');
+const studioBtnViewData = document.getElementById('studioBtnViewData');
+const studioActionDataSub = document.getElementById('studioActionDataSub');
+const studioDataCountBadge = document.getElementById('studioDataCountBadge');
 const studioTechBody = document.getElementById('studioTechBody');
-const studioTechArrow = document.getElementById('studioTechArrow');
+const studioHubCloseBtn = document.getElementById('studioHubCloseBtn');
+const studioTabBtnSql = document.getElementById('studioTabBtnSql');
+const studioTabBtnData = document.getElementById('studioTabBtnData');
+const studioTabBtnAst = document.getElementById('studioTabBtnAst');
+const studioHubDataCounter = document.getElementById('studioHubDataCounter');
+const studioPanelSql = document.getElementById('studioPanelSql');
+const studioPanelData = document.getElementById('studioPanelData');
+const studioPanelAst = document.getElementById('studioPanelAst');
 const studioSqlExecuted = document.getElementById('studioSqlExecuted');
 const studioSqlParams = document.getElementById('studioSqlParams');
 const studioQueryIntentJson = document.getElementById('studioQueryIntentJson');
@@ -409,10 +431,20 @@ function setupEventListeners() {
   }
 
   // 5. Export Query Table to CSV
+  if (overviewExportCsvBtn) {
+    overviewExportCsvBtn.addEventListener('click', () => {
+      if (currentOverviewResultData) {
+        exportArrayToCsv(currentOverviewResultData, 'resolviq_overview_records.csv');
+        showToast('Exported query records to CSV.');
+      }
+    });
+  }
+
   if (studioExportCsvBtn) {
     studioExportCsvBtn.addEventListener('click', () => {
-      if (currentStudioResultData && Array.isArray(currentStudioResultData)) {
-        exportArrayToCsv(currentStudioResultData, 'query_result.csv');
+      if (currentStudioResultData) {
+        exportArrayToCsv(currentStudioResultData, 'resolviq_studio_records.csv');
+        showToast('Exported query records to CSV.');
       }
     });
   }
@@ -422,16 +454,109 @@ function setupEventListeners() {
     studioResultContainer.classList.add('hidden');
   });
 
-  // 7. Technical Architecture Accordions
-  overviewTechToggle.addEventListener('click', () => {
-    const isHidden = overviewTechBody.classList.toggle('hidden');
-    overviewTechArrow.innerHTML = isHidden ? '&#9662;' : '&#9652;';
-  });
+  // 7. Interactive Action Cards & Technical Hub Tabs (Overview)
+  function switchOverviewHubTab(tabName) {
+    [overviewTabBtnSql, overviewTabBtnData, overviewTabBtnAst].forEach(btn => {
+      if (btn) btn.classList.toggle('active', btn.dataset.tab === tabName);
+    });
+    if (overviewPanelSql) overviewPanelSql.classList.toggle('hidden', tabName !== 'sql');
+    if (overviewPanelData) overviewPanelData.classList.toggle('hidden', tabName !== 'data');
+    if (overviewPanelAst) overviewPanelAst.classList.toggle('hidden', tabName !== 'ast');
+  }
 
-  studioTechToggle.addEventListener('click', () => {
-    const isHidden = studioTechBody.classList.toggle('hidden');
-    studioTechArrow.innerHTML = isHidden ? '&#9662;' : '&#9652;';
-  });
+  function openOverviewHub(tabName) {
+    if (!overviewTechBody) return;
+    const isCurrentlyOpen = !overviewTechBody.classList.contains('hidden');
+    const activeTabBtn = [overviewTabBtnSql, overviewTabBtnData, overviewTabBtnAst].find(b => b && b.classList.contains('active'));
+    const currentActiveTab = activeTabBtn ? activeTabBtn.dataset.tab : 'sql';
+
+    if (isCurrentlyOpen && currentActiveTab === tabName) {
+      overviewTechBody.classList.add('hidden');
+      if (overviewBtnViewSql) overviewBtnViewSql.classList.remove('active');
+      if (overviewBtnViewData) overviewBtnViewData.classList.remove('active');
+    } else {
+      overviewTechBody.classList.remove('hidden');
+      switchOverviewHubTab(tabName);
+      if (overviewBtnViewSql) overviewBtnViewSql.classList.toggle('active', tabName === 'sql');
+      if (overviewBtnViewData) overviewBtnViewData.classList.toggle('active', tabName === 'data');
+      overviewTechBody.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }
+
+  if (overviewBtnViewSql) {
+    overviewBtnViewSql.addEventListener('click', () => openOverviewHub('sql'));
+  }
+  if (overviewBtnViewData) {
+    overviewBtnViewData.addEventListener('click', () => openOverviewHub('data'));
+  }
+  if (overviewTabBtnSql) {
+    overviewTabBtnSql.addEventListener('click', () => switchOverviewHubTab('sql'));
+  }
+  if (overviewTabBtnData) {
+    overviewTabBtnData.addEventListener('click', () => switchOverviewHubTab('data'));
+  }
+  if (overviewTabBtnAst) {
+    overviewTabBtnAst.addEventListener('click', () => switchOverviewHubTab('ast'));
+  }
+  if (overviewHubCloseBtn) {
+    overviewHubCloseBtn.addEventListener('click', () => {
+      if (overviewTechBody) overviewTechBody.classList.add('hidden');
+      if (overviewBtnViewSql) overviewBtnViewSql.classList.remove('active');
+      if (overviewBtnViewData) overviewBtnViewData.classList.remove('active');
+    });
+  }
+
+  // 8. Interactive Action Cards & Technical Hub Tabs (Studio)
+  function switchStudioHubTab(tabName) {
+    [studioTabBtnSql, studioTabBtnData, studioTabBtnAst].forEach(btn => {
+      if (btn) btn.classList.toggle('active', btn.dataset.tab === tabName);
+    });
+    if (studioPanelSql) studioPanelSql.classList.toggle('hidden', tabName !== 'sql');
+    if (studioPanelData) studioPanelData.classList.toggle('hidden', tabName !== 'data');
+    if (studioPanelAst) studioPanelAst.classList.toggle('hidden', tabName !== 'ast');
+  }
+
+  function openStudioHub(tabName) {
+    if (!studioTechBody) return;
+    const isCurrentlyOpen = !studioTechBody.classList.contains('hidden');
+    const activeTabBtn = [studioTabBtnSql, studioTabBtnData, studioTabBtnAst].find(b => b && b.classList.contains('active'));
+    const currentActiveTab = activeTabBtn ? activeTabBtn.dataset.tab : 'sql';
+
+    if (isCurrentlyOpen && currentActiveTab === tabName) {
+      studioTechBody.classList.add('hidden');
+      if (studioBtnViewSql) studioBtnViewSql.classList.remove('active');
+      if (studioBtnViewData) studioBtnViewData.classList.remove('active');
+    } else {
+      studioTechBody.classList.remove('hidden');
+      switchStudioHubTab(tabName);
+      if (studioBtnViewSql) studioBtnViewSql.classList.toggle('active', tabName === 'sql');
+      if (studioBtnViewData) studioBtnViewData.classList.toggle('active', tabName === 'data');
+      studioTechBody.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }
+
+  if (studioBtnViewSql) {
+    studioBtnViewSql.addEventListener('click', () => openStudioHub('sql'));
+  }
+  if (studioBtnViewData) {
+    studioBtnViewData.addEventListener('click', () => openStudioHub('data'));
+  }
+  if (studioTabBtnSql) {
+    studioTabBtnSql.addEventListener('click', () => switchStudioHubTab('sql'));
+  }
+  if (studioTabBtnData) {
+    studioTabBtnData.addEventListener('click', () => switchStudioHubTab('data'));
+  }
+  if (studioTabBtnAst) {
+    studioTabBtnAst.addEventListener('click', () => switchStudioHubTab('ast'));
+  }
+  if (studioHubCloseBtn) {
+    studioHubCloseBtn.addEventListener('click', () => {
+      if (studioTechBody) studioTechBody.classList.add('hidden');
+      if (studioBtnViewSql) studioBtnViewSql.classList.remove('active');
+      if (studioBtnViewData) studioBtnViewData.classList.remove('active');
+    });
+  }
 
   interviewGuideToggle.addEventListener('click', () => {
     const isHidden = interviewGuideBody.classList.toggle('hidden');
@@ -627,7 +752,8 @@ function setQueryLoading(isLoading, targetPanel) {
       if (overviewThinkingState) overviewThinkingState.classList.remove('hidden');
       if (overviewAnswerBanner) overviewAnswerBanner.classList.add('hidden');
       if (overviewFiltersWrap) overviewFiltersWrap.classList.add('hidden');
-      if (overviewTechToggle) overviewTechToggle.classList.add('hidden');
+      if (overviewBtnViewSql) overviewBtnViewSql.classList.remove('active');
+      if (overviewBtnViewData) overviewBtnViewData.classList.remove('active');
       if (overviewTechBody) overviewTechBody.classList.add('hidden');
       overviewResultCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
@@ -642,9 +768,9 @@ function setQueryLoading(isLoading, targetPanel) {
       if (studioThinkingState) studioThinkingState.classList.remove('hidden');
       if (studioAnswerBanner) studioAnswerBanner.classList.add('hidden');
       if (studioFiltersWrap) studioFiltersWrap.classList.add('hidden');
-      if (studioTechToggle) studioTechToggle.classList.add('hidden');
+      if (studioBtnViewSql) studioBtnViewSql.classList.remove('active');
+      if (studioBtnViewData) studioBtnViewData.classList.remove('active');
       if (studioTechBody) studioTechBody.classList.add('hidden');
-      if (studioDataTableWrap) studioDataTableWrap.classList.add('hidden');
       studioResultContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
       queryTimerInterval = setInterval(() => {
@@ -663,18 +789,17 @@ function setQueryLoading(isLoading, targetPanel) {
       overviewSubmitBtn.innerHTML = '<span class="sparkle-icon">✦</span> <span class="btn-text">Ask ResolvIQ</span>';
       if (overviewThinkingState) overviewThinkingState.classList.add('hidden');
       if (overviewAnswerBanner) overviewAnswerBanner.classList.remove('hidden');
-      if (overviewTechToggle) overviewTechToggle.classList.remove('hidden');
     } else {
       studioSubmitBtn.disabled = false;
       studioSubmitBtn.querySelector('.btn-label').textContent = 'Execute Query';
       if (studioThinkingState) studioThinkingState.classList.add('hidden');
       if (studioAnswerBanner) studioAnswerBanner.classList.remove('hidden');
-      if (studioTechToggle) studioTechToggle.classList.remove('hidden');
     }
   }
 }
 
 function renderOverviewResult(data) {
+  currentOverviewResultData = data.result;
   overviewQueryType.textContent = data.query_type.toUpperCase();
   overviewExecTime.textContent = `${data.execution_time_ms} ms`;
   overviewAnswerText.innerHTML = formatAnswerText(data.answer);
@@ -710,6 +835,23 @@ function renderOverviewResult(data) {
   overviewSqlExecuted.textContent = data.sql_executed || 'Query compiled through safe ORM abstraction.';
   overviewSqlParams.textContent = JSON.stringify(data.filters ? data.filters.map(f => f.value).filter(v => v !== null) : [], null, 2);
   overviewQueryIntentJson.textContent = JSON.stringify(data.query_intent || { operation: data.query_type, filters: data.filters }, null, 2);
+
+  // Compute record count and update dynamic badges
+  let recCount = 0;
+  if (Array.isArray(data.result)) {
+    recCount = data.result.length;
+  } else if (data.result && typeof data.result === 'object') {
+    recCount = 1;
+  }
+  if (overviewDataCountBadge) {
+    overviewDataCountBadge.innerHTML = `${recCount} record${recCount !== 1 ? 's' : ''} <span class="arrow-indicator">&#9662;</span>`;
+  }
+  if (overviewActionDataSub) {
+    overviewActionDataSub.textContent = recCount > 0 ? `${recCount} matching record${recCount !== 1 ? 's' : ''} found` : 'No tabular records returned';
+  }
+  if (overviewHubDataCounter) {
+    overviewHubDataCounter.textContent = recCount;
+  }
 
   // Populate raw results table inside inspector
   renderOverviewResultsTable(data.result);
@@ -823,6 +965,23 @@ function renderStudioResult(data) {
   studioSqlParams.textContent = JSON.stringify(data.filters ? data.filters.map(f => f.value).filter(v => v !== null) : [], null, 2);
   studioQueryIntentJson.textContent = JSON.stringify(data.query_intent || { operation: data.query_type, filters: data.filters }, null, 2);
 
+  // Compute record count and update dynamic badges
+  let studioRecCount = 0;
+  if (Array.isArray(data.result)) {
+    studioRecCount = data.result.length;
+  } else if (data.result && typeof data.result === 'object') {
+    studioRecCount = 1;
+  }
+  if (studioDataCountBadge) {
+    studioDataCountBadge.innerHTML = `${studioRecCount} record${studioRecCount !== 1 ? 's' : ''} <span class="arrow-indicator">&#9662;</span>`;
+  }
+  if (studioActionDataSub) {
+    studioActionDataSub.textContent = studioRecCount > 0 ? `${studioRecCount} matching record${studioRecCount !== 1 ? 's' : ''} found` : 'No tabular records returned';
+  }
+  if (studioHubDataCounter) {
+    studioHubDataCounter.textContent = studioRecCount;
+  }
+
   renderStudioTable(data.result);
 
   studioResultContainer.classList.remove('hidden');
@@ -834,43 +993,46 @@ function renderStudioTable(result) {
   studioTableBody.innerHTML = '';
 
   if (!result || (Array.isArray(result) && result.length === 0)) {
-    studioDataTableWrap.classList.add('hidden');
     return;
   }
 
-  if (Array.isArray(result) && typeof result[0] === 'object') {
-    studioDataTableWrap.classList.remove('hidden');
-    const cols = Object.keys(result[0]);
-
-    // Headers
-    const trHead = document.createElement('tr');
-    cols.forEach(c => {
-      const th = document.createElement('th');
-      th.textContent = c.replace(/_/g, ' ').toUpperCase();
-      trHead.appendChild(th);
-    });
-    studioTableHead.appendChild(trHead);
-
-    // Rows
-    result.forEach(row => {
-      const tr = document.createElement('tr');
-      cols.forEach(c => {
-        const td = document.createElement('td');
-        let val = row[c];
-        if (val === null || val === undefined) val = '—';
-
-        if (c === 'priority' || c === 'status') {
-          td.innerHTML = `<span class="tag-badge tag-${String(val).toLowerCase()}">${val}</span>`;
-        } else {
-          td.textContent = val;
-        }
-        tr.appendChild(td);
-      });
-      studioTableBody.appendChild(tr);
-    });
+  let rows = [];
+  if (!Array.isArray(result) && typeof result === 'object') {
+    rows = [result];
+  } else if (Array.isArray(result) && typeof result[0] === 'object') {
+    rows = result;
   } else {
-    studioDataTableWrap.classList.add('hidden');
+    return;
   }
+
+  const cols = Object.keys(rows[0]);
+
+  // Headers
+  const trHead = document.createElement('tr');
+  cols.forEach(c => {
+    const th = document.createElement('th');
+    th.textContent = c.replace(/_/g, ' ').toUpperCase();
+    trHead.appendChild(th);
+  });
+  studioTableHead.appendChild(trHead);
+
+  // Rows
+  rows.forEach(row => {
+    const tr = document.createElement('tr');
+    cols.forEach(c => {
+      const td = document.createElement('td');
+      let val = row[c];
+      if (val === null || val === undefined) val = '—';
+
+      if (c === 'priority' || c === 'status') {
+        td.innerHTML = `<span class="tag-badge tag-${String(val).toLowerCase()}">${val}</span>`;
+      } else {
+        td.textContent = val;
+      }
+      tr.appendChild(td);
+    });
+    studioTableBody.appendChild(tr);
+  });
 }
 
 function showQueryError(question, message, targetPanel) {
@@ -1330,7 +1492,15 @@ function copyToClipboard(text, successMessage = 'Copied to clipboard!', btn = nu
 }
 
 function exportArrayToCsv(items, filename = 'export.csv') {
-  if (!items || !items.length) return;
+  if (!items) return;
+  if (!Array.isArray(items)) {
+    if (typeof items === 'object') {
+      items = [items];
+    } else {
+      return;
+    }
+  }
+  if (!items.length) return;
   const keys = Object.keys(items[0]);
   const header = keys.join(',');
   const rows = items.map(item => {
