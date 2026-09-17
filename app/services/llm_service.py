@@ -1,8 +1,8 @@
 import json
 import logging
-import re
 from pathlib import Path
 from typing import Any, Dict, Optional
+
 import httpx
 
 from app.core.config import get_settings
@@ -20,9 +20,51 @@ from app.models.query_models import (
 
 logger = logging.getLogger(__name__)
 
+# ──────────────────────────────────────────────────────────────
+# System prompts
+# ──────────────────────────────────────────────────────────────
+
+CLASSIFICATION_PROMPT = """You are ResolvIQ, an AI assistant for a customer support ticket analytics platform.
+Your job is to decide whether a user message is asking about the support ticket DATABASE, or is just general CHAT.
+
+DATABASE questions include anything about tickets, agents, priorities, statuses, categories, resolution times, customer ratings, anomalies, SLAs, or any data that lives in the support_tickets table.
+
+CHAT includes greetings, asking what you can do, asking for explanations of concepts, or any question that does NOT require querying the database.
+
+Respond with ONLY a JSON object, no markdown, no explanation:
+{"mode": "db_query"} or {"mode": "chat"}
+
+User message: {user_question}"""
+
+CHAT_SYSTEM_PROMPT = """You are ResolvIQ, a friendly and knowledgeable AI assistant for a customer support ticket analytics platform.
+
+You help users understand and analyze their support ticket data. The platform has a SQLite database with 500 support tickets containing fields like: ticket_id, created_at, category (Billing/Technical/General), priority (Low/Medium/High/Critical), status (Open/Resolved/Escalated), response_time_hrs, resolution_time_hrs, agent_id, customer_rating (1-5), and issue_summary.
+
+When users greet you or ask general questions, respond naturally and helpfully. If they ask what you can do, explain that you can:
+- Count and filter tickets by any criteria
+- Find top/bottom performers among agents
+- Calculate averages (ratings, resolution times, etc.)
+- Detect anomalies in resolution times and response times
+- Group and compare data by category, priority, status, or agent
+- Answer any question about the support ticket dataset
+
+Keep responses concise, friendly, and helpful. Guide users toward asking data questions when appropriate."""
+
+ANSWER_SYSTEM_PROMPT = """You are ResolvIQ, an AI assistant that summarizes database query results into clear, natural language answers.
+
+RULES:
+1. Base your answer ONLY on the provided SQL results. Never invent or guess numbers.
+2. Be concise but informative. Include the key numbers from the results.
+3. If the results contain a list of records, summarize the key findings (don't list every record).
+4. If the result is a count, state it clearly.
+5. If the result is an aggregation (average, sum, etc.), state the value with context.
+6. If there are group_by results, highlight the top entries.
+7. Do NOT mention SQL, queries, or databases in your answer — just give the answer naturally.
+8. Format numbers nicely (e.g., "3.75 out of 5" for ratings, "19.2 hours" for times)."""
+
 
 class LLMService:
-    """Handles LLM communication via Ollama with robust validation, self-correction, and fallback."""
+    """Handles LLM communication via Groq/Ollama for query parsing, classification, chat, and answer generation."""
 
     def __init__(self):
         self.settings = get_settings()
@@ -53,9 +95,9 @@ class LLMService:
                 "status": "connected"
             }
         return {
-            "provider": "deterministic_fallback",
-            "model": "rule-based-nlp-v1",
-            "status": "fallback_active"
+            "provider": "none",
+            "model": "unavailable",
+            "status": "no_llm_configured"
         }
 
     @property
@@ -75,13 +117,106 @@ class LLMService:
         except Exception:
             return False
 
+    # ──────────────────────────────────────────────────────────
+    # 1. CLASSIFICATION: Is this a DB query or general chat?
+    # ──────────────────────────────────────────────────────────
+
+    async def classify_question(self, question: str) -> str:
+        """Classify whether the user question needs a database query or is general chat.
+        Returns 'db_query' or 'chat'.
+        """
+        prompt = CLASSIFICATION_PROMPT.replace("{user_question}", question)
+
+        # Try Groq first
+        if await self.is_groq_available():
+            try:
+                result = await self._call_groq_raw(prompt, system_msg="Classify user intent. Output JSON only.", json_mode=True)
+                if result:
+                    parsed = json.loads(self._extract_json_str(result))
+                    mode = parsed.get("mode", "db_query")
+                    if mode in ("db_query", "chat"):
+                        logger.info(f"Classification via Groq: {mode}")
+                        return mode
+            except Exception as e:
+                logger.warning(f"Groq classification failed: {e}")
+
+        # Try Ollama
+        if await self.is_ollama_available():
+            try:
+                result = await self._call_ollama_raw(prompt, json_mode=True)
+                if result:
+                    parsed = json.loads(self._extract_json_str(result))
+                    mode = parsed.get("mode", "db_query")
+                    if mode in ("db_query", "chat"):
+                        logger.info(f"Classification via Ollama: {mode}")
+                        return mode
+            except Exception as e:
+                logger.warning(f"Ollama classification failed: {e}")
+
+        # Simple keyword heuristic as last resort (NOT hardcoded answers — just classification)
+        q = question.lower().strip()
+        db_keywords = [
+            "ticket", "agent", "priority", "status", "category", "resolution",
+            "response time", "rating", "customer", "open", "resolved", "escalated",
+            "critical", "high", "medium", "low", "how many", "count", "average",
+            "avg", "total", "anomal", "sla", "breach", "billing", "technical",
+            "general", "agt-", "tkt-", "longest", "shortest", "most", "least",
+            "unresolved", "show me", "list", "find", "which", "top", "bottom",
+            "worst", "best"
+        ]
+        if any(kw in q for kw in db_keywords):
+            return "db_query"
+        return "chat"
+
+    # ──────────────────────────────────────────────────────────
+    # 2. CHAT MODE: General conversation
+    # ──────────────────────────────────────────────────────────
+
+    async def chat_respond(self, question: str) -> str:
+        """Generate a conversational response for non-database questions."""
+
+        # Try Groq
+        if await self.is_groq_available():
+            try:
+                result = await self._call_groq_raw(question, system_msg=CHAT_SYSTEM_PROMPT, json_mode=False)
+                if result:
+                    logger.info("Chat response generated via Groq")
+                    return result.strip()
+            except Exception as e:
+                logger.warning(f"Groq chat failed: {e}")
+
+        # Try Ollama
+        if await self.is_ollama_available():
+            try:
+                result = await self._call_ollama_raw(
+                    f"System: {CHAT_SYSTEM_PROMPT}\n\nUser: {question}", json_mode=False
+                )
+                if result:
+                    logger.info("Chat response generated via Ollama")
+                    return result.strip()
+            except Exception as e:
+                logger.warning(f"Ollama chat failed: {e}")
+
+        # Minimal fallback — no hardcoded data
+        return (
+            "Hello! I'm ResolvIQ, your AI support ticket analytics assistant. "
+            "I can help you analyze support tickets — try asking me things like "
+            "'How many tickets are open?' or 'Which agent resolved the most tickets?'. "
+            "Unfortunately, I'm unable to connect to my AI engine right now for general conversation, "
+            "but I can still answer your database questions!"
+        )
+
+    # ──────────────────────────────────────────────────────────
+    # 3. DB QUERY MODE: Parse question → QueryIntent
+    # ──────────────────────────────────────────────────────────
+
     async def parse_query(self, question: str) -> QueryIntent:
-        """Translate natural language question to QueryIntent with multi-tier LLM and fallback resilience."""
+        """Translate natural language question to QueryIntent using LLM only (no hardcoded rules)."""
         clean_question = question.strip()
         if not clean_question:
             raise InvalidQueryError("Question cannot be empty.")
 
-        # Tier 1: Try Groq Cloud API if configured (300ms latency)
+        # Tier 1: Try Groq Cloud API
         if await self.is_groq_available():
             try:
                 intent = await self._call_groq_parse(clean_question)
@@ -89,9 +224,9 @@ class LLMService:
                     logger.info(f"Successfully parsed query via Groq ({self.settings.groq_model})")
                     return intent
             except Exception as e:
-                logger.warning(f"Groq parsing failed: {e}. Falling back to secondary provider.")
+                logger.warning(f"Groq parsing failed: {e}. Falling back to Ollama.")
 
-        # Tier 2: Try local Ollama if available
+        # Tier 2: Try local Ollama
         if await self.is_ollama_available():
             try:
                 intent = await self._call_ollama_parse(clean_question)
@@ -99,290 +234,81 @@ class LLMService:
                     logger.info(f"Successfully parsed query via Ollama ({self.settings.llm_model})")
                     return intent
             except Exception as e:
-                logger.warning(f"Ollama parsing failed: {e}. Utilizing deterministic fallback parser.")
+                logger.warning(f"Ollama parsing failed: {e}")
 
-        # Tier 3: High-precision deterministic fallback engine
-        return self._fallback_parse(clean_question)
-
-    async def _call_groq_parse(self, question: str, correction_context: Optional[str] = None) -> Optional[QueryIntent]:
-        """Send query parsing prompt to Groq Cloud API."""
-        prompt = self.prompt_template.replace("{user_question}", question)
-        if correction_context:
-            prompt += f"\n\nPrevious attempt failed with validation error: {correction_context}. Correct schema and return ONLY valid JSON."
-
-        headers = {
-            "Authorization": f"Bearer {self.settings.groq_api_key}",
-            "Content-Type": "application/json",
-        }
-        payload = {
-            "model": self.settings.groq_model,
-            "messages": [
-                {
-                    "role": "system",
-                    "content": "You are a precise Natural Language Query Parser for a customer support ticket system. Output valid JSON only."
-                },
-                {"role": "user", "content": prompt}
-            ],
-            "response_format": {"type": "json_object"},
-            "temperature": 0.0,
-        }
-
-        async with httpx.AsyncClient(timeout=self.settings.llm_timeout_seconds) as client:
-            response = await client.post(
-                "https://api.groq.com/openai/v1/chat/completions",
-                headers=headers,
-                json=payload
-            )
-
-            if response.status_code != 200:
-                logger.error(f"Groq returned HTTP status {response.status_code}: {response.text}")
-                return None
-
-            data = response.json()
-            raw_content = data["choices"][0]["message"]["content"]
-            cleaned_json = self._extract_json_str(raw_content)
-            parsed_dict = json.loads(cleaned_json)
-            return QueryIntent.model_validate(parsed_dict)
-
-    async def _call_ollama_parse(self, question: str, correction_context: Optional[str] = None) -> Optional[QueryIntent]:
-        """Send query parsing prompt to Ollama with temperature=0 and JSON formatting."""
-        prompt = self.prompt_template.replace("{user_question}", question)
-        if correction_context:
-            prompt += f"\n\nPrevious attempt failed with validation error: {correction_context}. Correct the JSON schema and return ONLY the corrected JSON."
-
-        payload = {
-            "model": self.settings.llm_model,
-            "prompt": prompt,
-            "stream": False,
-            "format": "json",
-            "options": {
-                "temperature": 0.0,
-                "top_p": 0.9,
-            }
-        }
-
-        async with httpx.AsyncClient(timeout=self.settings.llm_timeout_seconds) as client:
-            response = await client.post(
-                f"{self.ollama_url}/api/generate",
-                json=payload
-            )
-
-            if response.status_code != 200:
-                logger.error(f"Ollama returned HTTP status {response.status_code}")
-                return None
-
-            data = response.json()
-            raw_content = data.get("response", "")
-
-            cleaned_json = self._extract_json_str(raw_content)
-            try:
-                parsed_dict = json.loads(cleaned_json)
-                return QueryIntent.model_validate(parsed_dict)
-            except Exception as val_err:
-                logger.warning(f"JSON validation failed on first attempt: {val_err}. Retrying once...")
-                if not correction_context:
-                    # Retry once with self-correction
-                    return await self._call_ollama_parse(question, correction_context=str(val_err))
-                return None
-
-    def _extract_json_str(self, text: str) -> str:
-        """Extract JSON object from potentially noisy LLM response."""
-        text = text.strip()
-        # Strip markdown fences if present
-        if text.startswith("```"):
-            lines = text.split("\n")
-            if lines[0].startswith("```"):
-                lines = lines[1:]
-            if lines and lines[-1].startswith("```"):
-                lines = lines[:-1]
-            text = "\n".join(lines).strip()
-
-        # Find outer braces
-        start = text.find("{")
-        end = text.rfind("}")
-        if start != -1 and end != -1 and end > start:
-            return text[start:end+1]
-        return text
-
-    def _fallback_parse(self, question: str) -> QueryIntent:
-        """Deterministic intent translation engine for zero-cost / offline support."""
-        q = question.lower().strip()
-
-        # Check for ambiguity
-        if any(term in q for term in ["weather", "yesterday", "tomorrow", "stocks", "who is the best agent"]):
-            if "yesterday" in q:
-                return QueryIntent(
-                    operation=QueryOperation.FILTER_LIST,
-                    is_ambiguous=True,
-                    clarification_needed="The support ticket dataset contains historical data from Jan to Mar 2024. 'Yesterday' is relative; please specify a date range or filter by priority/status."
-                )
-            if "best agent" in q:
-                return QueryIntent(
-                    operation=QueryOperation.GROUP_BY,
-                    is_ambiguous=True,
-                    clarification_needed="'Best agent' is subjective. Please specify whether you want the agent who resolved the most tickets or has the highest average customer rating."
-                )
-
-        # 1. "How many tickets are currently open?"
-        if ("how many" in q or "count" in q) and "open" in q and "unresolved" not in q:
-            return QueryIntent(
-                operation=QueryOperation.COUNT,
-                filters=[
-                    FilterCondition(field=AllowedColumn.STATUS, operator=FilterOperator.EQUALS, value="Open")
-                ]
-            )
-
-        # 2. "How many critical tickets are unresolved?"
-        if "critical" in q and ("unresolved" in q or "not resolved" in q or "open" in q) and ("how many" in q or "count" in q):
-            return QueryIntent(
-                operation=QueryOperation.COUNT,
-                filters=[
-                    FilterCondition(field=AllowedColumn.PRIORITY, operator=FilterOperator.EQUALS, value="Critical"),
-                    FilterCondition(field=AllowedColumn.STATUS, operator=FilterOperator.NOT_EQUALS, value="Resolved")
-                ]
-            )
-
-        # 3. "How many high priority tickets are unresolved?"
-        if "high" in q and ("unresolved" in q or "not resolved" in q) and ("how many" in q or "count" in q):
-            return QueryIntent(
-                operation=QueryOperation.COUNT,
-                filters=[
-                    FilterCondition(field=AllowedColumn.PRIORITY, operator=FilterOperator.EQUALS, value="High"),
-                    FilterCondition(field=AllowedColumn.STATUS, operator=FilterOperator.NOT_EQUALS, value="Resolved")
-                ]
-            )
-
-        # 4. "Which agent resolved the most tickets?"
-        if ("agent" in q or "who" in q) and "resolved" in q and ("most" in q or "highest" in q or "top" in q):
-            return QueryIntent(
-                operation=QueryOperation.GROUP_BY,
-                group_by=AllowedColumn.AGENT_ID,
-                filters=[
-                    FilterCondition(field=AllowedColumn.STATUS, operator=FilterOperator.EQUALS, value="Resolved")
-                ],
-                aggregation=AggregationSpec(function=AggregationType.COUNT, field=AllowedColumn.TICKET_ID),
-                order_by=AllowedColumn.TICKET_ID,
-                order_direction=SortOrder.DESC,
-                limit=3
-            )
-
-        # 5. "Which agent has the lowest average customer rating?"
-        if ("agent" in q) and ("lowest" in q or "worst" in q) and ("rating" in q):
-            return QueryIntent(
-                operation=QueryOperation.GROUP_BY,
-                group_by=AllowedColumn.AGENT_ID,
-                filters=[
-                    FilterCondition(field=AllowedColumn.CUSTOMER_RATING, operator=FilterOperator.IS_NOT_NULL)
-                ],
-                aggregation=AggregationSpec(function=AggregationType.AVG, field=AllowedColumn.CUSTOMER_RATING),
-                order_by=AllowedColumn.CUSTOMER_RATING,
-                order_direction=SortOrder.ASC,
-                limit=3
-            )
-
-        # 6. "What is the average customer rating for Technical category tickets?"
-        if ("average" in q or "avg" in q) and ("rating" in q):
-            filters = [
-                FilterCondition(field=AllowedColumn.CUSTOMER_RATING, operator=FilterOperator.IS_NOT_NULL)
-            ]
-            if "technical" in q:
-                filters.append(FilterCondition(field=AllowedColumn.CATEGORY, operator=FilterOperator.EQUALS, value="Technical"))
-            elif "billing" in q:
-                filters.append(FilterCondition(field=AllowedColumn.CATEGORY, operator=FilterOperator.EQUALS, value="Billing"))
-            elif "general" in q:
-                filters.append(FilterCondition(field=AllowedColumn.CATEGORY, operator=FilterOperator.EQUALS, value="General"))
-
-            return QueryIntent(
-                operation=QueryOperation.AGGREGATE,
-                aggregation=AggregationSpec(function=AggregationType.AVG, field=AllowedColumn.CUSTOMER_RATING),
-                filters=filters
-            )
-
-        # 7. "Show all Critical tickets not resolved within 12 hours."
-        if "critical" in q and ("not resolved" in q or "longer than" in q or "over" in q) and "12" in q:
-            return QueryIntent(
-                operation=QueryOperation.FILTER_LIST,
-                filters=[
-                    FilterCondition(field=AllowedColumn.PRIORITY, operator=FilterOperator.EQUALS, value="Critical"),
-                    FilterCondition(field=AllowedColumn.RESOLUTION_TIME_HRS, operator=FilterOperator.GREATER_THAN, value=12.0)
-                ],
-                order_by=AllowedColumn.RESOLUTION_TIME_HRS,
-                order_direction=SortOrder.DESC,
-                limit=50
-            )
-
-        # 8. "Which category has the highest number of unresolved tickets?" / "Which category has the most tickets?"
-        if "category" in q and ("most" in q or "highest" in q or "number" in q):
-            filters = []
-            if "unresolved" in q:
-                filters.append(FilterCondition(field=AllowedColumn.STATUS, operator=FilterOperator.NOT_EQUALS, value="Resolved"))
-            return QueryIntent(
-                operation=QueryOperation.GROUP_BY,
-                group_by=AllowedColumn.CATEGORY,
-                filters=filters,
-                aggregation=AggregationSpec(function=AggregationType.COUNT, field=AllowedColumn.TICKET_ID),
-                order_direction=SortOrder.DESC,
-                limit=5
-            )
-
-        # 9. "Show the 10 tickets with the longest resolution time."
-        if ("longest" in q or "highest" in q or "slowest" in q) and "resolution" in q:
-            return QueryIntent(
-                operation=QueryOperation.TOP_N,
-                filters=[
-                    FilterCondition(field=AllowedColumn.RESOLUTION_TIME_HRS, operator=FilterOperator.IS_NOT_NULL)
-                ],
-                order_by=AllowedColumn.RESOLUTION_TIME_HRS,
-                order_direction=SortOrder.DESC,
-                limit=10
-            )
-
-        # 10. "Are there any anomalies in resolution times?"
-        if "anomal" in q:
-            return QueryIntent(
-                operation=QueryOperation.FILTER_LIST,
-                filters=[
-                    FilterCondition(field=AllowedColumn.RESOLUTION_TIME_HRS, operator=FilterOperator.GREATER_THAN, value=48.35)
-                ],
-                order_by=AllowedColumn.RESOLUTION_TIME_HRS,
-                order_direction=SortOrder.DESC,
-                limit=25
-            )
-
-        # 11. "Show tickets with no customer rating"
-        if "no customer rating" in q or "unrated" in q or "without rating" in q:
-            return QueryIntent(
-                operation=QueryOperation.FILTER_LIST,
-                filters=[
-                    FilterCondition(field=AllowedColumn.CUSTOMER_RATING, operator=FilterOperator.IS_NULL)
-                ],
-                limit=50
-            )
-
-        # 12. "Show tickets with no resolution time"
-        if "no resolution time" in q or "unresolved" in q:
-            return QueryIntent(
-                operation=QueryOperation.FILTER_LIST,
-                filters=[
-                    FilterCondition(field=AllowedColumn.STATUS, operator=FilterOperator.NOT_EQUALS, value="Resolved")
-                ],
-                limit=50
-            )
-
-        # Default fallback: general count or list
-        if "how many" in q or "total" in q or "count" in q:
-            return QueryIntent(
-                operation=QueryOperation.COUNT,
-                filters=[]
-            )
-
-        return QueryIntent(
-            operation=QueryOperation.FILTER_LIST,
-            limit=20
+        # No hardcoded fallback — raise an error so the caller knows parsing failed
+        raise InvalidQueryError(
+            "Unable to parse your question. Both LLM providers (Groq and Ollama) are unavailable. "
+            "Please check your API key configuration or try again later."
         )
 
+    # ──────────────────────────────────────────────────────────
+    # 4. ANSWER GENERATION: Summarize SQL results via LLM
+    # ──────────────────────────────────────────────────────────
+
+    async def generate_llm_answer(self, question: str, exec_result: Dict[str, Any]) -> Optional[str]:
+        """Use the LLM to generate a natural language answer from SQL execution results."""
+        answer_prompt = self._build_answer_prompt(question, exec_result)
+
+        # Try Groq
+        if await self.is_groq_available():
+            try:
+                result = await self._call_groq_raw(answer_prompt, system_msg=ANSWER_SYSTEM_PROMPT, json_mode=False)
+                if result:
+                    logger.info("Answer generated via Groq LLM")
+                    return result.strip()
+            except Exception as e:
+                logger.warning(f"Groq answer generation failed: {e}")
+
+        # Try Ollama
+        if await self.is_ollama_available():
+            try:
+                result = await self._call_ollama_raw(
+                    f"System: {ANSWER_SYSTEM_PROMPT}\n\nUser: {answer_prompt}", json_mode=False
+                )
+                if result:
+                    logger.info("Answer generated via Ollama LLM")
+                    return result.strip()
+            except Exception as e:
+                logger.warning(f"Ollama answer generation failed: {e}")
+
+        return None  # Caller will use deterministic fallback
+
+    def _build_answer_prompt(self, question: str, exec_result: Dict[str, Any]) -> str:
+        """Build the prompt for answer generation from SQL results."""
+        op = exec_result.get("operation", "unknown")
+        data = exec_result.get("data")
+        sql = exec_result.get("sql_executed", "N/A")
+
+        # Format the data for the LLM
+        if isinstance(data, list):
+            # Limit to first 20 records for the prompt
+            data_str = json.dumps(data[:20], indent=2, default=str)
+            total = exec_result.get("count", len(data))
+            data_summary = f"Total matching records: {total}\nFirst records:\n{data_str}"
+        elif isinstance(data, dict):
+            data_str = json.dumps(data, indent=2, default=str)
+            data_summary = f"Result:\n{data_str}"
+        else:
+            data_summary = f"Result: {data}"
+
+        return f"""User asked: "{question}"
+
+Query type: {op}
+SQL executed: {sql}
+
+{data_summary}
+
+Please provide a clear, natural language answer to the user's question based ONLY on these results."""
+
+    # ──────────────────────────────────────────────────────────
+    # 5. DETERMINISTIC FALLBACK ANSWER (no LLM needed)
+    # ──────────────────────────────────────────────────────────
+
     def generate_final_response(self, question: str, intent: QueryIntent, exec_result: Dict[str, Any]) -> str:
-        """Deterministically formats clear, professional human-readable answer strictly backed by real data."""
+        """Deterministic formatter for when LLM answer generation is unavailable.
+        Produces clear human-readable answers strictly backed by the SQL result data.
+        """
         if exec_result.get("operation") == "ambiguous":
             return exec_result.get("clarification", "The query is ambiguous. Please clarify your criteria.")
 
@@ -403,9 +329,8 @@ class LLMService:
             val = data.get("value")
             sample = data.get("sample_size", 0)
             if val is not None:
-                # Exclude internal non-null filter on the same field
                 visible_filters = [
-                    f for f in intent.filters 
+                    f for f in intent.filters
                     if not (f.field.value == data.get("field") and f.operator.value == "is_not_null")
                 ]
                 filter_desc = self._summarize_filters(visible_filters)
@@ -421,15 +346,15 @@ class LLMService:
                 first_val = top_row[first_key]
                 metric_val = top_row.get("agg_value", top_row.get("record_count", "N/A"))
 
-                note = ""
-                q_lower = question.lower()
-                if ("month" in q_lower or "this month" in q_lower) and group_field == "agent id":
-                    note = " (Dataset timeframe spans Jan–Mar 2024; across all Q1 records AGT-12 and AGT-09 share top rank with 37 resolved tickets, while AGT-12 led in March with 14)"
-
-                is_lowest = intent.order_direction == SortOrder.ASC or any(w in q_lower for w in ["lowest", "worst", "minimum", "least"])
+                is_lowest = intent.order_direction == SortOrder.ASC or any(
+                    w in question.lower() for w in ["lowest", "worst", "minimum", "least"]
+                )
                 prefix = "Lowest result" if is_lowest else "Top result"
-                summary = f"{prefix}: {first_val} with {metric_val} ({group_field}){note}."
-                breakdown = ", ".join([f"{r[first_key]}: {r.get('agg_value', r.get('record_count'))}" for r in data[:5]])
+                summary = f"{prefix}: {first_val} with {metric_val} ({group_field})."
+                breakdown = ", ".join([
+                    f"{r[first_key]}: {r.get('agg_value', r.get('record_count'))}"
+                    for r in data[:5]
+                ])
                 return f"{summary} Full breakdown: [{breakdown}]."
             return f"No grouping data available for {group_field}."
 
@@ -437,13 +362,9 @@ class LLMService:
             count = exec_result.get("count", len(data) if isinstance(data, list) else 0)
             filter_desc = self._summarize_filters(intent.filters)
             context = f" matching {filter_desc}" if filter_desc else ""
-            time_note = ""
-            q_lower = question.lower()
-            if "week" in q_lower or "this week" in q_lower:
-                time_note = " (Note: Dataset contains historical records from Jan–Mar 2024)"
             if count == 0:
-                return f"No tickets found{context}.{time_note}"
-            return f"Found {count} tickets{context}.{time_note}"
+                return f"No tickets found{context}."
+            return f"Found {count} tickets{context}."
 
         return "Query executed successfully against the database."
 
@@ -471,6 +392,128 @@ class LLMService:
                 descriptions.append(f"{field} in {val}")
 
         return " and ".join(descriptions)
+
+    # ──────────────────────────────────────────────────────────
+    # RAW LLM CALL HELPERS
+    # ──────────────────────────────────────────────────────────
+
+    async def _call_groq_raw(self, user_content: str, system_msg: str = "", json_mode: bool = False) -> Optional[str]:
+        """Generic Groq API call. Returns raw text response."""
+        messages = []
+        if system_msg:
+            messages.append({"role": "system", "content": system_msg})
+        messages.append({"role": "user", "content": user_content})
+
+        headers = {
+            "Authorization": f"Bearer {self.settings.groq_api_key}",
+            "Content-Type": "application/json",
+        }
+        payload = {
+            "model": self.settings.groq_model,
+            "messages": messages,
+            "temperature": 0.1 if not json_mode else 0.0,
+        }
+        if json_mode:
+            payload["response_format"] = {"type": "json_object"}
+
+        async with httpx.AsyncClient(timeout=self.settings.llm_timeout_seconds) as client:
+            response = await client.post(
+                "https://api.groq.com/openai/v1/chat/completions",
+                headers=headers,
+                json=payload,
+            )
+            if response.status_code != 200:
+                logger.error(f"Groq returned HTTP {response.status_code}: {response.text}")
+                return None
+
+            data = response.json()
+            return data["choices"][0]["message"]["content"]
+
+    async def _call_ollama_raw(self, prompt: str, json_mode: bool = False) -> Optional[str]:
+        """Generic Ollama API call. Returns raw text response."""
+        payload = {
+            "model": self.settings.llm_model,
+            "prompt": prompt,
+            "stream": False,
+            "options": {"temperature": 0.1 if not json_mode else 0.0, "top_p": 0.9},
+        }
+        if json_mode:
+            payload["format"] = "json"
+
+        async with httpx.AsyncClient(timeout=self.settings.llm_timeout_seconds) as client:
+            response = await client.post(f"{self.ollama_url}/api/generate", json=payload)
+            if response.status_code != 200:
+                logger.error(f"Ollama returned HTTP {response.status_code}")
+                return None
+
+            data = response.json()
+            return data.get("response", "")
+
+    # ──────────────────────────────────────────────────────────
+    # QUERY INTENT PARSING (Groq / Ollama)
+    # ──────────────────────────────────────────────────────────
+
+    async def _call_groq_parse(self, question: str, correction_context: Optional[str] = None) -> Optional[QueryIntent]:
+        """Send query parsing prompt to Groq Cloud API."""
+        prompt = self.prompt_template.replace("{user_question}", question)
+        if correction_context:
+            prompt += f"\n\nPrevious attempt failed with validation error: {correction_context}. Correct schema and return ONLY valid JSON."
+
+        system_msg = "You are a precise Natural Language Query Parser for a customer support ticket system. Output valid JSON only."
+        raw_content = await self._call_groq_raw(prompt, system_msg=system_msg, json_mode=True)
+
+        if not raw_content:
+            return None
+
+        cleaned_json = self._extract_json_str(raw_content)
+        try:
+            parsed_dict = json.loads(cleaned_json)
+            return QueryIntent.model_validate(parsed_dict)
+        except Exception as val_err:
+            logger.warning(f"Groq JSON validation failed: {val_err}")
+            if not correction_context:
+                return await self._call_groq_parse(question, correction_context=str(val_err))
+            return None
+
+    async def _call_ollama_parse(self, question: str, correction_context: Optional[str] = None) -> Optional[QueryIntent]:
+        """Send query parsing prompt to Ollama with temperature=0 and JSON formatting."""
+        prompt = self.prompt_template.replace("{user_question}", question)
+        if correction_context:
+            prompt += f"\n\nPrevious attempt failed with validation error: {correction_context}. Correct the JSON schema and return ONLY the corrected JSON."
+
+        raw_content = await self._call_ollama_raw(prompt, json_mode=True)
+
+        if not raw_content:
+            return None
+
+        cleaned_json = self._extract_json_str(raw_content)
+        try:
+            parsed_dict = json.loads(cleaned_json)
+            return QueryIntent.model_validate(parsed_dict)
+        except Exception as val_err:
+            logger.warning(f"Ollama JSON validation failed on first attempt: {val_err}. Retrying once...")
+            if not correction_context:
+                return await self._call_ollama_parse(question, correction_context=str(val_err))
+            return None
+
+    def _extract_json_str(self, text: str) -> str:
+        """Extract JSON object from potentially noisy LLM response."""
+        text = text.strip()
+        # Strip markdown fences if present
+        if text.startswith("```"):
+            lines = text.split("\n")
+            if lines[0].startswith("```"):
+                lines = lines[1:]
+            if lines and lines[-1].startswith("```"):
+                lines = lines[:-1]
+            text = "\n".join(lines).strip()
+
+        # Find outer braces
+        start = text.find("{")
+        end = text.rfind("}")
+        if start != -1 and end != -1 and end > start:
+            return text[start:end+1]
+        return text
 
 
 # Singleton helper instance

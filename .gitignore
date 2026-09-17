@@ -40,6 +40,9 @@ env/
 *.sqlite3
 data/*.db
 data/*.sqlite
+*.db-shm
+*.db-wal
+*.db-journal
 
 # Pytest & test cache
 .pytest_cache/

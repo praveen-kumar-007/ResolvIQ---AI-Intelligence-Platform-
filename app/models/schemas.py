@@ -96,6 +96,7 @@ class QueryResponse(BaseModel):
     result: Any
     execution_time_ms: float
     is_ambiguous: bool = False
+    is_chat_response: bool = False
     clarification: Optional[str] = None
     sql_executed: Optional[str] = None
     query_intent: Optional[Dict[str, Any]] = None

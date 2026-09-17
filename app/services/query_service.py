@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 class QueryService:
-    """Orchestrates natural language understanding, safe execution, and verified response formulation."""
+    """Orchestrates two-mode query processing: general chat and SQL-backed database queries."""
 
     def __init__(
         self,
@@ -21,16 +21,51 @@ class QueryService:
         self.query_executor = exec_svc or query_executor
 
     async def process_question(self, req: QueryRequest) -> QueryResponse:
-        """Process natural language question end-to-end with high precision and performance timing."""
+        """Process natural language question with two-mode detection: chat or database query."""
         start_time = time.perf_counter()
         question = req.question.strip()
 
         logger.info(f"Processing query: '{question}'")
 
-        # 1. Parse intent (LLM with deterministic fallback)
-        intent = await self.llm_service.parse_query(question)
+        # ── Step 1: Classify the question ──
+        mode = await self.llm_service.classify_question(question)
+        logger.info(f"Question classified as: {mode}")
 
-        # 2. Check for genuine ambiguity
+        # ── Step 2: Handle CHAT mode ──
+        if mode == "chat":
+            chat_response = await self.llm_service.chat_respond(question)
+            duration_ms = round((time.perf_counter() - start_time) * 1000, 2)
+
+            return QueryResponse(
+                question=question,
+                answer=chat_response,
+                query_type="chat",
+                filters=[],
+                result=None,
+                execution_time_ms=duration_ms,
+                is_ambiguous=False,
+                is_chat_response=True,
+                clarification=None,
+            )
+
+        # ── Step 3: DB QUERY mode — Parse intent via LLM ──
+        try:
+            intent = await self.llm_service.parse_query(question)
+        except Exception as e:
+            duration_ms = round((time.perf_counter() - start_time) * 1000, 2)
+            logger.error(f"Query parsing failed: {e}")
+            return QueryResponse(
+                question=question,
+                answer=str(e),
+                query_type="error",
+                filters=[],
+                result=None,
+                execution_time_ms=duration_ms,
+                is_ambiguous=True,
+                clarification=str(e),
+            )
+
+        # ── Step 4: Check for ambiguity ──
         if intent.is_ambiguous:
             duration_ms = round((time.perf_counter() - start_time) * 1000, 2)
             return QueryResponse(
@@ -44,11 +79,19 @@ class QueryService:
                 clarification=intent.clarification_needed
             )
 
-        # 3. Execute safe query against database
+        # ── Step 5: Execute safe SQL query against database ──
         exec_result = self.query_executor.execute(intent)
 
-        # 4. Generate final data-backed answer
-        answer = self.llm_service.generate_final_response(question, intent, exec_result)
+        # ── Step 6: Generate answer (LLM first, deterministic fallback) ──
+        answer = None
+        try:
+            answer = await self.llm_service.generate_llm_answer(question, exec_result)
+        except Exception as e:
+            logger.warning(f"LLM answer generation failed: {e}")
+
+        if not answer:
+            # Fall back to deterministic formatter
+            answer = self.llm_service.generate_final_response(question, intent, exec_result)
 
         duration_ms = round((time.perf_counter() - start_time) * 1000, 2)
 
@@ -68,6 +111,7 @@ class QueryService:
             result=exec_result.get("data"),
             execution_time_ms=duration_ms,
             is_ambiguous=False,
+            is_chat_response=False,
             clarification=None,
             sql_executed=exec_result.get("sql_executed"),
             query_intent=intent.model_dump(mode="json")
