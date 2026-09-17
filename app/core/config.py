@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     llm_model: str = "qwen3:8b"
     ollama_base_url: str = "http://127.0.0.1:11434"
     groq_api_key: str | None = None
-    groq_model: str = "openai/gpt-oss-120b"
+    groq_model: str = "llama-3.3-70b-versatile"
     llm_timeout_seconds: float = 45.0
 
     # Data and Persistence Paths

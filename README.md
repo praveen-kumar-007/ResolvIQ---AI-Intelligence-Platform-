@@ -4,16 +4,27 @@
   <p><strong>Enterprise AI Support Ticket Analytics &amp; Statistical Anomaly Intelligence Platform</strong></p>
   <p><em>AI Engineer Technical Assessment Sprint &bull; <strong>DOTMappers IT Pvt. Ltd.</strong></em></p>
 
+  [![Live Demo](https://img.shields.io/badge/Live%20Demo-resolviqai.vercel.app-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://resolviqai.vercel.app/)
+
   [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/)
   [![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688.svg)](https://fastapi.tiangolo.com/)
   [![Docker](https://img.shields.io/badge/Docker-Containerized-2496ED.svg)](Dockerfile)
   [![Docker Compose](https://img.shields.io/badge/Docker%20Compose-v3.8-2496ED.svg)](docker-compose.yml)
-  [![Vercel](https://img.shields.io/badge/Vercel-Serverless%20Ready-000000.svg)](vercel.json)
+  [![Vercel](https://img.shields.io/badge/Vercel-Deployed-000000.svg)](https://resolviqai.vercel.app/)
   [![SQLite](https://img.shields.io/badge/SQLite-B--Tree%20Indexed-003B57.svg)](https://www.sqlite.org/)
   [![Tests](https://img.shields.io/badge/tests-39%20passed%20(100%25)-success.svg)](tests/)
   [![Zero Cost](https://img.shields.io/badge/LLM-Zero--Cost%20Verified-green.svg)](README.md)
   [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 </div>
+
+---
+
+> [!IMPORTANT]
+> ### 🌐 Live Production Deployment
+> ResolvIQ is live and operational on Vercel: **[https://resolviqai.vercel.app/](https://resolviqai.vercel.app/)**
+> * **Interactive Web Dashboard**: [https://resolviqai.vercel.app/](https://resolviqai.vercel.app/)
+> * **Interactive OpenAPI Swagger Docs**: [https://resolviqai.vercel.app/docs](https://resolviqai.vercel.app/docs)
+> * **Live Health Telemetry**: [https://resolviqai.vercel.app/health](https://resolviqai.vercel.app/health)
 
 ---
 
@@ -133,76 +144,140 @@ flowchart TD
    ```
 
 4. **Environment Configuration**:
-   The project comes pre-configured with sensible defaults in `.env`.
-   ```env
-   LLM_PROVIDER=ollama
-   LLM_MODEL=qwen3:8b
-   OLLAMA_BASE_URL=http://localhost:11434
-   LLM_TIMEOUT_SECONDS=45.0
-
-   # Optional: For instant 300ms cloud inference via Groq Free Tier
-   # GROQ_API_KEY=gsk_your_groq_key_here
-   # GROQ_MODEL=llama-3.3-70b-versatile
-
-   DATABASE_PATH=./data/support_tickets.db
-   CSV_PATH=./data/support_tickets.csv
-   APP_HOST=0.0.0.0
-   APP_PORT=8000
+   Create a `.env` file in the root directory (or copy `.env.example`):
+   ```bash
+   cp .env.example .env
    ```
 
-5. **Run the Application**:
-   - **Development Mode (Auto-Reload)**:
-     ```bash
-     python run.py
-     ```
-   - **Production Mode (Multi-Worker Concurrency)**:
-     ```bash
-     python run.py --prod --workers 4
-     ```
-   *The server starts at `http://localhost:8000`.*
-   - **Web Dashboard**: Open [http://localhost:8000](http://localhost:8000)
-   - **Interactive API Documentation**: Open [http://localhost:8000/docs](http://localhost:8000/docs)
+---
 
-### Production Deployment Options
+### 4.1 LLM Configuration Guide: Groq & Ollama
 
-#### Option A: Docker (Production Container)
+ResolvIQ supports dual LLM backends with automated token-limit failover and a zero-dependency deterministic fallback:
+
+#### Mode 1: Cloud High-Speed Inference via Groq (Recommended for Instant Setup)
+Groq provides blazing-fast inference (~100–300ms) with a generous free-tier:
+1. Obtain a free API key at [https://console.groq.com/keys](https://console.groq.com/keys).
+2. Configure `.env`:
+   ```env
+   LLM_PROVIDER=groq
+   GROQ_API_KEY=gsk_your_actual_key_here
+   GROQ_MODEL=llama-3.3-70b-versatile
+   ```
+3. Restart ResolvIQ. Queries will now execute using Groq's high-speed LPU infrastructure.
+
+#### Mode 2: 100% Offline & Private Inference via Ollama
+For complete data privacy or air-gapped deployments:
+1. Download and install Ollama from [https://ollama.ai](https://ollama.ai).
+2. Pull your preferred model (e.g. `qwen2.5:7b`, `llama3.1:8b`, or `qwen3:8b`):
+   ```bash
+   ollama pull qwen2.5:7b
+   ```
+3. Ensure Ollama is running (`ollama serve`).
+4. Configure `.env`:
+   ```env
+   LLM_PROVIDER=ollama
+   LLM_MODEL=qwen2.5:7b
+   OLLAMA_BASE_URL=http://127.0.0.1:11434
+   ```
+
+#### 🛡️ Automatic Token-Limit & Rate-Limit Failover Protection
+What happens when Groq runs out of tokens or hits rate limits?
+* **Detection**: ResolvIQ detects HTTP 429 (`Too Many Requests` / `Rate limit exceeded`) and HTTP 413 (`Context Length Exceeded`).
+* **Seamless Failover**: The system automatically and silently fails over to your local **Ollama** engine (or the deterministic AST engine if Ollama is offline).
+* **Transparent Notification**: A warning banner is displayed directly in the dashboard and toast notifications:
+  `⚠️ Groq token limit or rate limit reached (HTTP 429). Automatically falling back to local Ollama / offline engine.`
+* **Zero Interruption**: The user's query is still executed with 100% mathematical accuracy against the database, with zero downtime.
+
+#### Mode 3: Zero-LLM Deterministic Fallback Engine
+If you don't have a Groq key and haven't installed Ollama, ResolvIQ works out-of-the-box! Its AST regex parsing engine translates natural language questions into safe SQLite queries in $<5\text{ms}$ with zero API keys or external services required.
+
+---
+
+### 4.2 Running the Application
+
+- **Development Mode (Auto-Reload)**:
+  ```bash
+  python run.py
+  ```
+- **Production Mode (Multi-Worker Concurrency)**:
+  ```bash
+  python run.py --prod --workers 4
+  ```
+*The server starts at `http://localhost:8000`.*
+- **Interactive Web Dashboard**: Open [http://localhost:8000](http://localhost:8000)
+- **Interactive API Documentation (Swagger)**: Open [http://localhost:8000/docs](http://localhost:8000/docs)
+- **Live Health Telemetry**: `curl http://localhost:8000/health`
+
+---
+
+### 4.3 Production Deployment Options
+
+#### Option A: Docker Compose (Recommended 1-Command Startup)
+Spin up the containerized stack with a single command:
 ```bash
-# Build the production image
-docker build -t resolviq-platform:latest .
-
-# Run with persistent volume and health check
-docker run -d --name resolviq -p 8000:8000 -v $(pwd)/data:/app/data resolviq-platform:latest
-```
-
-#### Option B: Docker Compose (1-Command Orchestration)
-```bash
-# Start ResolvIQ in background
+# Start ResolvIQ with persistent data storage
 docker compose up -d
 
-# Check service logs and health
+# Inspect health and container logs
 docker compose ps
 docker compose logs -f resolviq
+
+# (Optional) Spin up ResolvIQ + Local Ollama together
+docker compose --profile local-llm up -d
 ```
 
-#### Option C: Vercel Cloud Serverless Deployment (Recommended)
-ResolvIQ is pre-configured for zero-friction serverless deployment on **Vercel**:
-1. Go to [Vercel Dashboard](https://vercel.com/new) and click **"Add New Project"**.
-2. Select and import your GitHub repository: `ResolvIQ---AI-Intelligence-Platform-`.
-3. Under **Environment Variables**, add:
+#### Option B: Standalone Production Dockerfile
+```bash
+# Build the production image with non-root security
+docker build -t resolviq-platform:latest .
+
+# Run container with volume mount and health check
+docker run -d --name resolviq -p 8000:8000 -v $(pwd)/data:/app/data resolviq-platform:latest
+
+# Verify live healthcheck
+docker inspect --format='{{json .State.Health.Status}}' resolviq
+```
+
+#### Option C: Automated CI/CD Pipeline (GitHub Actions)
+ResolvIQ includes a comprehensive CI/CD workflow defined in `.github/workflows/ci-cd.yml`:
+* **Matrix Automated Testing**: Runs tests on **Python 3.11** and **Python 3.12** on every push and PR.
+* **Duration Profiling**: Executes `pytest -v --durations=0` across all 39 test cases.
+* **Docker Verification**: Builds the Docker container, spins it up in test mode, and asserts `http://localhost:8000/health` before approving the build.
+
+```mermaid
+flowchart LR
+    Push([git push origin main]) --> TestJob[Matrix Tests: Python 3.11 & 3.12]
+    TestJob --> PytestPass[Pytest: 39 Tests PASSED]
+    PytestPass --> DockerJob[Docker Build & Healthcheck]
+    DockerJob --> Verified([Verified Production Artifact])
+```
+
+#### Option D: Vercel Cloud Serverless Deployment (Live Production URL)
+ResolvIQ is live and operational on Vercel at: **[https://resolviqai.vercel.app/](https://resolviqai.vercel.app/)**
+
+Pre-configured for zero-friction serverless deployment on **Vercel**:
+1. Import repository on [Vercel Dashboard](https://vercel.com/new).
+2. Under **Environment Variables**, configure:
    - `ENVIRONMENT`: `production`
-   - `GROQ_API_KEY`: `gsk_your_groq_key_here` *(optional, for ~300ms cloud LLM inference; if omitted, ResolvIQ's instant deterministic fallback engine runs at <5ms)*
-   - `GROQ_MODEL`: `openai/gpt-oss-120b` *(or `llama-3.3-70b-versatile`)*
-   - `LLM_PROVIDER`: `groq` *(or `ollama`)*
-   - `DOCS_ENABLED`: `true`
-   - `CORS_ORIGINS`: `*`
-4. Click **Deploy**. Vercel will build the serverless functions via `@vercel/python` using `vercel.json` and `api/index.py`.
-5. Your application and web dashboard will be live at `https://<your-project>.vercel.app`.
+   - `GROQ_API_KEY`: `gsk_...` *(optional, for cloud inference)*
+   - `GROQ_MODEL`: `llama-3.3-70b-versatile`
+   - `LLM_PROVIDER`: `groq`
+3. Click **Deploy**. Vercel compiles `@vercel/python` using `vercel.json` and `api/index.py`. The SQLite database is automatically seeded into `/tmp/support_tickets.db` on cold-start.
+4. Access the live platform at **[https://resolviqai.vercel.app/](https://resolviqai.vercel.app/)**.
 
-*Note: In Vercel serverless execution, ResolvIQ automatically copies and seeds the SQLite database into `/tmp/support_tickets.db` upon cold start.*
-
-#### Option D: Linux VPS (Systemd + Nginx)
+#### Option E: Linux VPS (Systemd + Nginx)
 - Deploy service unit: `cp deploy/resolviq.service /etc/systemd/system/ && systemctl enable --now resolviq`
 - Configure reverse proxy: `cp deploy/nginx.conf /etc/nginx/sites-available/resolviq && ln -s /etc/nginx/sites-available/resolviq /etc/nginx/sites-enabled/`
+
+---
+
+### 4.4 Universal Responsive Design System
+The Web Dashboard is fully responsive and cross-browser verified across all device categories:
+* **Mobile ($\le 480\text{px}$)**: Fluid stacked cards, touch-optimized typography, collapsed headers, horizontal-scroll table containers, compact KPI badges.
+* **Tablet ($\le 768\text{px}$)**: Single-column query forms, horizontally scrollable navigation bar, touch-friendly filter dropdowns.
+* **Small Laptops ($\le 1024\text{px}$)**: 2-column KPI grid, wrapped query chips, responsive technical inspector accordions.
+* **Desktop ($> 1024\text{px}$)**: Full glassmorphism interface, interactive SVG analytics charts, live SQL and AST JSON viewer.
 
 ---
 

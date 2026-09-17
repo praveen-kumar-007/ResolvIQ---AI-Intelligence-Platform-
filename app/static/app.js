@@ -592,6 +592,10 @@ async function executeQuery(question, targetPanel = 'overview') {
       return;
     }
 
+    if (data.provider_notice) {
+      showToast(data.provider_notice, false);
+    }
+
     if (targetPanel === 'overview') {
       renderOverviewResult(data);
     } else {
@@ -674,6 +678,19 @@ function renderOverviewResult(data) {
   overviewQueryType.textContent = data.query_type.toUpperCase();
   overviewExecTime.textContent = `${data.execution_time_ms} ms`;
   overviewAnswerText.innerHTML = formatAnswerText(data.answer);
+
+  const existingNotice = document.getElementById('overviewProviderNotice');
+  if (existingNotice) existingNotice.remove();
+  if (data.provider_notice) {
+    const noticeDiv = document.createElement('div');
+    noticeDiv.id = 'overviewProviderNotice';
+    noticeDiv.className = 'provider-notice-banner';
+    noticeDiv.style.cssText = 'background: rgba(234, 179, 8, 0.12); border: 1px solid rgba(234, 179, 8, 0.35); color: #eab308; padding: 10px 14px; border-radius: 8px; font-size: 0.82rem; margin: 10px 0; display: flex; align-items: center; gap: 8px; font-weight: 500;';
+    noticeDiv.innerHTML = `<span style="font-size: 1.1rem;">⚠️</span> <span>${data.provider_notice}</span>`;
+    if (overviewAnswerBanner && overviewAnswerBanner.parentNode) {
+      overviewAnswerBanner.parentNode.insertBefore(noticeDiv, overviewAnswerBanner);
+    }
+  }
 
   overviewFiltersList.innerHTML = '';
   if (data.filters && data.filters.length > 0) {
@@ -773,6 +790,19 @@ function renderStudioResult(data) {
   studioQueryType.textContent = data.query_type.toUpperCase();
   studioExecTime.textContent = `${data.execution_time_ms} ms`;
   studioAnswerText.innerHTML = formatAnswerText(data.answer);
+
+  const existingStudioNotice = document.getElementById('studioProviderNotice');
+  if (existingStudioNotice) existingStudioNotice.remove();
+  if (data.provider_notice) {
+    const noticeDiv = document.createElement('div');
+    noticeDiv.id = 'studioProviderNotice';
+    noticeDiv.className = 'provider-notice-banner';
+    noticeDiv.style.cssText = 'background: rgba(234, 179, 8, 0.12); border: 1px solid rgba(234, 179, 8, 0.35); color: #eab308; padding: 10px 14px; border-radius: 8px; font-size: 0.82rem; margin: 10px 0; display: flex; align-items: center; gap: 8px; font-weight: 500;';
+    noticeDiv.innerHTML = `<span style="font-size: 1.1rem;">⚠️</span> <span>${data.provider_notice}</span>`;
+    if (studioAnswerBanner && studioAnswerBanner.parentNode) {
+      studioAnswerBanner.parentNode.insertBefore(noticeDiv, studioAnswerBanner);
+    }
+  }
 
   studioFiltersList.innerHTML = '';
   if (data.filters && data.filters.length > 0) {

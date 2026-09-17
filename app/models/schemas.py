@@ -100,4 +100,5 @@ class QueryResponse(BaseModel):
     clarification: Optional[str] = None
     sql_executed: Optional[str] = None
     query_intent: Optional[Dict[str, Any]] = None
+    provider_notice: Optional[str] = None
 

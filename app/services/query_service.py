@@ -114,7 +114,8 @@ class QueryService:
             is_chat_response=False,
             clarification=None,
             sql_executed=exec_result.get("sql_executed"),
-            query_intent=intent.model_dump(mode="json")
+            query_intent=intent.model_dump(mode="json"),
+            provider_notice=self.llm_service.last_provider_notice
         )
 
 

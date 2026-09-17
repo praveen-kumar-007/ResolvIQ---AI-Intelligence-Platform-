@@ -70,6 +70,7 @@ class LLMService:
     def __init__(self):
         self.settings = get_settings()
         self.prompt_template = self._load_prompt_template()
+        self.last_provider_notice: Optional[str] = None
 
     def _load_prompt_template(self) -> str:
         prompt_path = Path(__file__).parent.parent / "prompts" / "query_prompt.txt"
@@ -217,7 +218,20 @@ class LLMService:
         if not clean_question:
             raise InvalidQueryError("Question cannot be empty.")
 
-        # Tier 1: Try Groq Cloud API
+        self.last_provider_notice = None
+        prefer_ollama = (self.settings.llm_provider or "").lower() == "ollama"
+
+        # If user explicitly configured Ollama preference in .env, try Ollama first
+        if prefer_ollama and await self.is_ollama_available():
+            try:
+                intent = await self._call_ollama_parse(clean_question)
+                if intent:
+                    logger.info(f"Successfully parsed query via Ollama ({self.settings.llm_model})")
+                    return intent
+            except Exception as e:
+                logger.warning(f"Ollama parsing failed: {e}. Trying Groq fallback.")
+
+        # Try Groq Cloud API
         if await self.is_groq_available():
             try:
                 intent = await self._call_groq_parse(clean_question)
@@ -226,9 +240,11 @@ class LLMService:
                     return intent
             except Exception as e:
                 logger.warning(f"Groq parsing failed: {e}. Falling back to Ollama.")
+                if not self.last_provider_notice:
+                    self.last_provider_notice = "Groq request failed. Automatically switched to local Ollama / offline engine."
 
-        # Tier 2: Try local Ollama
-        if await self.is_ollama_available():
+        # Fall back to local Ollama if not already tried
+        if not prefer_ollama and await self.is_ollama_available():
             try:
                 intent = await self._call_ollama_parse(clean_question)
                 if intent:
@@ -688,18 +704,40 @@ Please provide a clear, natural language answer to the user's question based ONL
         if json_mode:
             payload["response_format"] = {"type": "json_object"}
 
-        async with httpx.AsyncClient(timeout=self.settings.llm_timeout_seconds) as client:
-            response = await client.post(
-                "https://api.groq.com/openai/v1/chat/completions",
-                headers=headers,
-                json=payload,
-            )
-            if response.status_code != 200:
-                logger.error(f"Groq returned HTTP {response.status_code}: {response.text}")
-                return None
+        try:
+            async with httpx.AsyncClient(timeout=self.settings.llm_timeout_seconds) as client:
+                response = await client.post(
+                    "https://api.groq.com/openai/v1/chat/completions",
+                    headers=headers,
+                    json=payload,
+                )
+                if response.status_code == 429:
+                    self.last_provider_notice = "Groq token limit or rate limit reached (HTTP 429). Automatically falling back to local Ollama / offline engine."
+                    logger.warning(f"Groq rate limit exceeded (HTTP 429): {response.text}")
+                    return None
+                elif response.status_code == 413:
+                    self.last_provider_notice = "Groq token payload limit exceeded (HTTP 413). Automatically falling back to local Ollama / offline engine."
+                    logger.warning(f"Groq token payload too large (HTTP 413): {response.text}")
+                    return None
+                elif response.status_code != 200:
+                    err_lower = response.text.lower()
+                    if "rate_limit" in err_lower or "token" in err_lower or "quota" in err_lower:
+                        self.last_provider_notice = "Groq token limit reached. Automatically switched to local Ollama / offline engine."
+                    else:
+                        self.last_provider_notice = f"Groq API returned HTTP {response.status_code}. Automatically switched to local Ollama / offline engine."
+                    logger.error(f"Groq returned HTTP {response.status_code}: {response.text}")
+                    return None
 
-            data = response.json()
-            return data["choices"][0]["message"]["content"]
+                data = response.json()
+                return data["choices"][0]["message"]["content"]
+        except httpx.TimeoutException:
+            self.last_provider_notice = "Groq API timed out. Switched to local Ollama / offline engine."
+            logger.warning("Groq API timed out. Falling back.")
+            return None
+        except Exception as err:
+            self.last_provider_notice = f"Groq connection error: {err}. Switched to local Ollama / offline engine."
+            logger.warning(f"Groq request error: {err}")
+            return None
 
     async def _call_ollama_raw(self, prompt: str, json_mode: bool = False) -> Optional[str]:
         """Generic Ollama API call. Returns raw text response."""
