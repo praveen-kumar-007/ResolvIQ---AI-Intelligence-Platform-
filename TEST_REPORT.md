@@ -2,7 +2,7 @@
 **Project:** ResolvIQ — Enterprise AI Support Ticket Analytics Platform  
 **Candidate:** Praveen Kumar (`praveen-kumar-007`)  
 **Repository:** [https://github.com/praveen-kumar-007/ResolvIQ---AI-Intelligence-Platform-](https://github.com/praveen-kumar-007/ResolvIQ---AI-Intelligence-Platform-)  
-**Target:** DOTMappers IT Pvt. Ltd. | AI Engineer Assessment Sprint  
+**Target:** DOTMappers IT Pvt. Ltd. | AI Intern Assessment Sprint  
 **Environment:** Python 3.13.13 | pytest 9.1.1 | Windows 64-bit  
 **Report Generated:** Live Execution Verification  
 

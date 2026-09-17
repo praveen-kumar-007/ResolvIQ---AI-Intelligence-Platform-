@@ -54,7 +54,7 @@ def create_docx_report():
     p_title.alignment = WD_ALIGN_PARAGRAPH.CENTER
     p_title.paragraph_format.space_before = Pt(10)
     p_title.paragraph_format.space_after = Pt(2)
-    run_org = p_title.add_run("DOTMappers IT Pvt. Ltd. | AI Engineer Assessment")
+    run_org = p_title.add_run("DOTMappers IT Pvt. Ltd. | AI Intern Assessment")
     run_org.font.size = Pt(13)
     run_org.font.bold = True
     run_org.font.color.rgb = TEAL
@@ -92,7 +92,7 @@ def create_docx_report():
         "• Candidate: Praveen Kumar (praveen-kumar-007)\n"
         "• Live Production URL: https://resolviqai.vercel.app/\n"
         "• Repository: https://github.com/praveen-kumar-007/ResolvIQ---AI-Intelligence-Platform-.git\n"
-        "• Role: AI Engineer / AI Intern Assessment Submission\n"
+        "• Role: AI Intern Assessment Submission\n"
         "• Organization: DOTMappers IT Pvt. Ltd.\n"
         "• Recipient: Mr. Rajath Kumar (HR Lead) | RajathKumar@dotmappers.in\n"
         "• CI/CD Pipeline: GitHub Actions matrix testing (Python 3.11 & 3.12) + Docker health checks\n"
@@ -313,13 +313,13 @@ def create_docx_report():
     add_sub_header("Option D: Cloud Serverless (Live at https://resolviqai.vercel.app/)")
     add_body_p("Fully live and operational on Vercel at https://resolviqai.vercel.app/ with automated cold-start database seeding into /tmp/support_tickets.db. Evaluators can directly access the interactive dashboard and OpenAPI Swagger docs at https://resolviqai.vercel.app/docs.", bold_prefix="• Vercel Deployment: ")
 
-    output_path = Path("DOTMappers_AI_Engineer_Assessment_Report.docx").resolve()
+    output_path = Path("DOTMappers_AI_Intern_Assessment_Report.docx").resolve()
     doc.save(str(output_path))
     print(f"[DOCX] Successfully generated: {output_path}")
 
 
 def create_pdf_report():
-    pdf_path = Path("DOTMappers_AI_Engineer_Assessment_Report.pdf").resolve()
+    pdf_path = Path("DOTMappers_AI_Intern_Assessment_Report.pdf").resolve()
     doc = SimpleDocTemplate(
         str(pdf_path),
         pagesize=letter,
@@ -434,7 +434,7 @@ def create_pdf_report():
     story = []
 
     # Title Banner
-    story.append(Paragraph("DOTMappers IT Pvt. Ltd. | AI Engineer Assessment", title_org_style))
+    story.append(Paragraph("DOTMappers IT Pvt. Ltd. | AI Intern Assessment", title_org_style))
     story.append(Paragraph("ResolvIQ: AI Support Ticket Analytics Platform", title_main_style))
     story.append(Paragraph("End-to-End System Sprint | Formal Assessment Submission Report", title_sub_style))
 
@@ -443,7 +443,7 @@ def create_pdf_report():
     • <b>Candidate:</b> Praveen Kumar (praveen-kumar-007)<br/>
     • <b>Live Production URL:</b> <font color="#00897B"><b>https://resolviqai.vercel.app/</b></font><br/>
     • <b>Repository:</b> https://github.com/praveen-kumar-007/ResolvIQ---AI-Intelligence-Platform-.git<br/>
-    • <b>Role:</b> AI Engineer / AI Intern Assessment Submission | <b>Organization:</b> DOTMappers IT Pvt. Ltd.<br/>
+    • <b>Role:</b> AI Intern Assessment Submission | <b>Organization:</b> DOTMappers IT Pvt. Ltd.<br/>
     • <b>Recipient:</b> Mr. Rajath Kumar (HR Lead) | RajathKumar@dotmappers.in<br/>
     • <b>CI/CD Pipeline:</b> GitHub Actions matrix testing (Python 3.11 & 3.12) + automated Docker health checks<br/>
     • <b>1-Command Docker Startup:</b> docker compose up -d (Accessible at http://localhost:8000)<br/>

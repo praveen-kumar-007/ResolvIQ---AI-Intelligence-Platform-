@@ -2,7 +2,7 @@
   <img src="resolviq_logo.jpg" width="170" alt="ResolvIQ Logo" style="border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.35); margin-bottom: 12px;" />
   <h1>ResolvIQ</h1>
   <p><strong>Enterprise AI Support Ticket Analytics &amp; Statistical Anomaly Intelligence Platform</strong></p>
-  <p><em>AI Engineer Technical Assessment Sprint &bull; <strong>DOTMappers IT Pvt. Ltd.</strong></em></p>
+  <p><em>AI Intern Technical Assessment Sprint &bull; <strong>DOTMappers IT Pvt. Ltd.</strong></em></p>
 
   [![Live Demo](https://img.shields.io/badge/Live%20Demo-resolviqai.vercel.app-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://resolviqai.vercel.app/)
 
@@ -654,11 +654,16 @@ The repository includes an exhaustive **39-test automated suite** executed via P
 
 - **Candidate**: Praveen Kumar (`praveen-kumar-007`)
 - **Repository**: [https://github.com/praveen-kumar-007/ResolvIQ---AI-Intelligence-Platform-](https://github.com/praveen-kumar-007/ResolvIQ---AI-Intelligence-Platform-)
-- **Role**: AI Engineer Assessment — End-to-End AI System Sprint
+- **Role**: AI Intern Assessment — End-to-End AI System Sprint
 - **Organization**: DOTMappers IT Pvt. Ltd.
 - **Recipient**: `RajathKumar@dotmappers.in`
-- **Subject Line**: `[AI Engineer Assessment] — Praveen Kumar`
+- **Subject Line**: `[AI Intern Assessment] — Praveen Kumar`
+- **Generated Formal Reports**:
+  - PDF Document: [`DOTMappers_AI_Intern_Assessment_Report.pdf`](DOTMappers_AI_Intern_Assessment_Report.pdf)
+  - Word Document: [`DOTMappers_AI_Intern_Assessment_Report.docx`](DOTMappers_AI_Intern_Assessment_Report.docx)
+  - Complete Q&A Catalog: [`ASSESSMENT_ANSWERS.md`](ASSESSMENT_ANSWERS.md)
+  - Automated Test Execution Report: [`TEST_REPORT.md`](TEST_REPORT.md)
 
 ---
 
-*Architected and engineered by Praveen Kumar for the DOTMappers IT Pvt. Ltd. AI Engineer Assessment.*
+*Architected and engineered by Praveen Kumar for the DOTMappers IT Pvt. Ltd. AI Intern Assessment.*

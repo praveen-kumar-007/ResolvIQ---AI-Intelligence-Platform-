@@ -1,9 +1,9 @@
-# DOTMappers AI Engineer Assessment — Questions & Verified Answers
+# DOTMappers AI Intern Assessment — Questions & Verified Answers
 **Platform:** ResolvIQ Support Analytics & Anomaly Intelligence System  
 **Live Production URL:** [https://resolviqai.vercel.app/](https://resolviqai.vercel.app/)  
 **Candidate:** Praveen Kumar (`praveen-kumar-007`)  
 **Repository:** [https://github.com/praveen-kumar-007/ResolvIQ---AI-Intelligence-Platform-](https://github.com/praveen-kumar-007/ResolvIQ---AI-Intelligence-Platform-)  
-**Role:** AI Engineer Assessment — End-to-End AI System Sprint  
+**Role:** AI Intern Assessment — End-to-End AI System Sprint  
 **Organization:** DOTMappers IT Pvt. Ltd.  
 
 ---
