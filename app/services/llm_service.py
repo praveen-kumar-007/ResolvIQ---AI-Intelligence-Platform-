@@ -384,7 +384,7 @@ class LLMService:
             )
 
         # ── Pattern 7: Count queries ──
-        if re.search(r"how\s+many\s+ticket", q) or re.search(r"(?:count|total|number)\s+(?:of\s+)?ticket", q):
+        if re.search(r"how\s+many\b", q) or re.search(r"(?:count|total|number)\s+(?:of\s+)?(?:.*?)?ticket", q):
             filters = []
             # Detect status filters
             if "open" in q:
@@ -430,7 +430,7 @@ class LLMService:
             )
 
         # ── Pattern 8: Generic filter list (show/list/find tickets) ──
-        if re.search(r"(?:show|list|find|display|get)\s+(?:me\s+)?(?:all\s+)?ticket", q):
+        if re.search(r"(?:show|list|find|display|get)\s+(?:me\s+)?(?:all\s+)?(?:.*?)?ticket", q):
             filters = []
             for status in ("Open", "Resolved", "Escalated"):
                 if status.lower() in q:
