@@ -186,6 +186,272 @@
          TAB 1: Executive Overview Dashboard
          ================================================================== -->
     <section class="tab-panel active" id="tabOverview">
+      <!-- Flagship Hero AI Inquiry Console (Search on Top) -->
+      <div class="enterprise-card hero-ai-console-card">
+        <!-- Ambient Glowing Border Highlight -->
+        <div class="hero-glow-border"></div>
+
+        <div class="hero-console-header">
+          <div class="hero-title-group">
+            <div class="hero-badge-row">
+              <span class="hero-engine-badge">
+                <span class="sparkle-icon">✦</span> ResolvIQ Neural Synthesis Engine
+              </span>
+              <span class="hero-accuracy-tag">
+                <span class="badge-dot"></span> 100% Zero-Hallucination
+              </span>
+            </div>
+            <h2 class="hero-console-heading">Ask Natural Language Operational Questions</h2>
+            <p class="hero-console-subtext">
+              Ask anything in plain English. Natural language is mapped to validated Pydantic AST and executed directly as strictly parameterized SQLite against 500 support tickets in milliseconds.
+            </p>
+          </div>
+          <div class="hero-actions-right">
+            <button class="btn-secondary hero-studio-link-btn" id="goToStudioBtn">
+              <span>Open Query Studio</span> &rarr;
+            </button>
+          </div>
+        </div>
+
+        <!-- Trust & Telemetry Feature Pills -->
+        <div class="hero-trust-bar">
+          <span class="trust-pill" title="Security Guaranteed: Never executes raw unvalidated LLM SQL code"><span class="trust-icon">&#128737;</span> Parameterized SQL Shield</span>
+          <span class="trust-pill" title="Hardware Accelerated: B-Tree indexed queries execute in sub-millisecond"><span class="trust-icon">&#9889;</span> B-Tree Indexed (&lt;5ms)</span>
+          <span class="trust-pill" title="Multi-Tier Orchestration: Cloud Groq 70B &amp; Local Ollama 8B with Fallback"><span class="trust-icon">&#129504;</span> Groq / Ollama / Fallback</span>
+          <span class="trust-pill" title="Live Operational Customer Support Dataset"><span class="trust-icon">&#128193;</span> 500 Ticket Records</span>
+        </div>
+
+        <!-- High-Tech Command Bar Form -->
+        <form id="overviewQueryForm" class="hero-query-form">
+          <div class="hero-command-bar">
+            <div class="command-input-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+            </div>
+            <input 
+              type="text" 
+              id="overviewQueryInput" 
+              class="hero-command-input" 
+              placeholder="Ask anything (e.g. Which category has the highest number of unresolved tickets?)..." 
+              required
+              autocomplete="off"
+            />
+            <div class="command-input-actions">
+              <kbd class="hero-kbd-pill" title="Press Enter to execute">Enter &#9166;</kbd>
+              <button type="submit" id="overviewSubmitBtn" class="btn-hero-submit">
+                <span class="sparkle-icon">&#10022;</span>
+                <span class="btn-text">Ask ResolvIQ</span>
+              </button>
+            </div>
+          </div>
+        </form>
+
+        <!-- Curated Interactive Inquiry Cards -->
+        <div class="hero-prompts-section">
+          <div class="hero-prompts-label">
+            <span>Operational Question Templates:</span>
+            <span class="prompts-sublabel">(Click any card to analyze instantly)</span>
+          </div>
+          <div class="hero-prompts-grid">
+            <button type="button" class="hero-prompt-card" data-query="How many tickets are currently open?">
+              <span class="prompt-category-badge badge-blue">&#128202; Volume</span>
+              <span class="prompt-text">How many tickets are currently open?</span>
+              <span class="prompt-expected">Count &rarr; 111 Open</span>
+            </button>
+
+            <button type="button" class="hero-prompt-card" data-query="How many critical tickets are unresolved?">
+              <span class="prompt-category-badge badge-red">&#128680; Escalations</span>
+              <span class="prompt-text">How many critical tickets are unresolved?</span>
+              <span class="prompt-expected">SLA &rarr; 31 Critical</span>
+            </button>
+
+            <button type="button" class="hero-prompt-card" data-query="Which agent resolved the most tickets this month?">
+              <span class="prompt-category-badge badge-green">&#128101; Performance</span>
+              <span class="prompt-text">Which agent resolved the most tickets this month?</span>
+              <span class="prompt-expected">Top &rarr; AGT-12 / AGT-09</span>
+            </button>
+
+            <button type="button" class="hero-prompt-card" data-query="What is the average customer rating for Technical category tickets?">
+              <span class="prompt-category-badge badge-purple">&#11088; CSAT</span>
+              <span class="prompt-text">What is the average rating for Technical tickets?</span>
+              <span class="prompt-expected">Metric &rarr; 3.74 Rating</span>
+            </button>
+
+            <button type="button" class="hero-prompt-card" data-query="Show me all Critical tickets not resolved within 12 hours.">
+              <span class="prompt-category-badge badge-amber">&#9201; Breach Outliers</span>
+              <span class="prompt-text">Show Critical tickets not resolved in 12h</span>
+              <span class="prompt-expected">Filter &rarr; 3 Outliers</span>
+            </button>
+
+            <button type="button" class="hero-prompt-card" data-query="Which agent has the lowest average customer rating?">
+              <span class="prompt-category-badge badge-cyan">&#128269; CSAT Drop</span>
+              <span class="prompt-text">Which agent has the lowest average customer rating?</span>
+              <span class="prompt-expected">Min &rarr; AGT-08 (3.48)</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Dynamic Result Box -->
+        <div class="result-card-box hidden" id="overviewResultCard">
+          <!-- Top Shimmer Accent -->
+          <div class="result-shimmer-bar"></div>
+
+          <div class="result-card-header">
+            <div class="result-meta-badges">
+              <span class="ai-engine-badge">
+                <span class="sparkle-icon">✦</span> AI Intelligence Engine
+              </span>
+              <span class="query-type-tag" id="overviewQueryType">COUNT</span>
+              <span class="exec-time-pill" id="overviewExecTime">-- ms</span>
+              <span class="deterministic-badge" title="Guaranteed safe execution against B-tree indexed SQLite database">
+                <span class="badge-dot"></span> 100% Deterministic SQL
+              </span>
+            </div>
+            <div class="result-actions-bar">
+              <button class="btn-secondary btn-icon-label" id="overviewCopyAnswerBtn" title="Copy answer to clipboard">
+                <span class="btn-icon">&#128203;</span> <span class="btn-text">Copy Answer</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Loading Thinking State -->
+          <div class="query-thinking-state hidden" id="overviewThinkingState">
+            <div class="thinking-spinner"></div>
+            <div class="thinking-content">
+              <div class="thinking-title">Synthesizing Natural Language &amp; Schema Mapping...</div>
+              <div class="thinking-subtitle">Validating Pydantic AST &bull; Compiling Zero-Injection SQLite Plan</div>
+            </div>
+            <div class="thinking-timer" id="overviewTimer">0.0s</div>
+          </div>
+
+          <!-- Verified Answer Hero Banner -->
+          <div class="answer-banner" id="overviewAnswerBanner">
+            <div class="answer-check-icon" title="Zero-Hallucination Verified Data Result">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                <path d="m9 12 2 2 4-4"/>
+              </svg>
+            </div>
+            <div class="answer-body">
+              <div class="answer-header-title">
+                <h4>Verified Data-Backed Answer</h4>
+                <span class="answer-verified-pill">Ground Truth Verified</span>
+              </div>
+              <p id="overviewAnswerText">--</p>
+            </div>
+          </div>
+
+          <!-- Applied Filters Breakdown -->
+          <div class="applied-filters-wrap hidden" id="overviewFiltersWrap">
+            <div class="filters-wrap-label">
+              <span class="filters-icon">&#9889;</span>
+              <span>Active Scope Filters:</span>
+            </div>
+            <div id="overviewFiltersList" class="filters-chips-container"></div>
+          </div>
+
+          <!-- Action Trigger Cards: View SQL & View Data -->
+          <div class="inspector-action-cards-grid">
+            <button type="button" class="inspector-action-card" id="overviewBtnViewSql">
+              <div class="action-card-left">
+                <div class="action-card-icon icon-sql">&#60;/&#62;</div>
+                <div class="action-card-info">
+                  <span class="action-card-title">Generated SQL Query</span>
+                  <span class="action-card-sub">Safe Parameterized SQLite Statement</span>
+                </div>
+              </div>
+              <div class="action-card-right">
+                <span class="action-card-badge">Show Code <span class="arrow-indicator">&#9662;</span></span>
+              </div>
+            </button>
+
+            <button type="button" class="inspector-action-card" id="overviewBtnViewData">
+              <div class="action-card-left">
+                <div class="action-card-icon icon-data">&#128202;</div>
+                <div class="action-card-info">
+                  <span class="action-card-title">Matching Data Records</span>
+                  <span class="action-card-sub" id="overviewActionDataSub">Tabular records found</span>
+                </div>
+              </div>
+              <div class="action-card-right">
+                <span class="action-card-badge" id="overviewDataCountBadge">0 records <span class="arrow-indicator">&#9662;</span></span>
+              </div>
+            </button>
+          </div>
+
+          <!-- Expandable Unified Technical & Data Hub -->
+          <div class="tech-inspector-hub hidden" id="overviewTechBody">
+            <!-- Tab Bar inside Hub -->
+            <div class="inspector-hub-header">
+              <div class="hub-tabs-list">
+                <button type="button" class="hub-tab-btn active" data-tab="sql" id="overviewTabBtnSql">
+                  <span class="hub-tab-icon">&#60;/&#62;</span>
+                  <span>SQL Statement</span>
+                </button>
+                <button type="button" class="hub-tab-btn" data-tab="data" id="overviewTabBtnData">
+                  <span class="hub-tab-icon">&#128202;</span>
+                  <span>Result Data Table</span>
+                  <span class="hub-tab-counter" id="overviewHubDataCounter">0</span>
+                </button>
+                <button type="button" class="hub-tab-btn" data-tab="ast" id="overviewTabBtnAst">
+                  <span class="hub-tab-icon">&#9881;</span>
+                  <span>QueryIntent AST</span>
+                </button>
+              </div>
+              <button type="button" class="btn-hub-close" id="overviewHubCloseBtn" title="Collapse Inspector">&times; Close</button>
+            </div>
+
+            <!-- Panel 1: SQL Code & Bindings -->
+            <div class="hub-tab-panel" id="overviewPanelSql">
+              <div class="inspector-card">
+                <div class="inspector-card-header">
+                  <span class="inspector-section-label">Safe Parameterized SQLite Query Executed</span>
+                  <button class="btn-code-copy" id="overviewCopySqlBtn" title="Copy SQL statement">&#128203; Copy SQL</button>
+                </div>
+                <div class="code-block-display" id="overviewSqlExecuted">--</div>
+              </div>
+              <div class="inspector-card">
+                <div class="inspector-section-label">Bound Execution Parameters</div>
+                <div class="code-block-display font-mono" id="overviewSqlParams">[]</div>
+              </div>
+            </div>
+
+            <!-- Panel 2: Data Records Table -->
+            <div class="hub-tab-panel hidden" id="overviewPanelData">
+              <div class="inspector-card" id="overviewResultsCard">
+                <div class="inspector-card-header">
+                  <span class="inspector-section-label">Filtered Data Records</span>
+                  <div style="display: flex; gap: 8px; align-items: center;">
+                    <span class="inspector-result-count" id="overviewResultCount">0 records</span>
+                    <button class="btn-code-copy" id="overviewExportCsvBtn" title="Export to CSV">&#128229; Export CSV</button>
+                  </div>
+                </div>
+                <div class="inspector-results-table-wrap" id="overviewResultsTableWrap">
+                  <table class="inspector-results-table" id="overviewResultsTable">
+                    <thead id="overviewResultsHead"></thead>
+                    <tbody id="overviewResultsBody"></tbody>
+                  </table>
+                </div>
+                <div class="inspector-no-results hidden" id="overviewNoResults">No tabular data returned for this query type.</div>
+              </div>
+            </div>
+
+            <!-- Panel 3: QueryIntent AST -->
+            <div class="hub-tab-panel hidden" id="overviewPanelAst">
+              <div class="inspector-card">
+                <div class="inspector-card-header">
+                  <span class="inspector-section-label">Validated Pydantic QueryIntent Schema</span>
+                  <span class="toggle-badge">Zero-Hallucination AST</span>
+                </div>
+                <div class="code-block-display font-mono" id="overviewQueryIntentJson">{}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- KPI Metric Row -->
       <div class="kpi-row">
         <div class="kpi-card">
@@ -273,273 +539,6 @@
             <div style="display: flex; justify-content: space-between; align-items: center;">
               <span style="font-size: 0.82rem; color: var(--text-secondary);">IQR Outlier Threshold</span>
               <span class="tag-badge tag-high" style="font-size: 0.82rem; font-weight: 700;">48.35 hrs</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Flagship Hero AI Inquiry Console -->
-      <div class="enterprise-card hero-ai-console-card">
-        <!-- Ambient Glowing Border Highlight -->
-        <div class="hero-glow-border"></div>
-
-        <div class="hero-console-header">
-          <div class="hero-title-group">
-            <div class="hero-badge-row">
-              <span class="hero-engine-badge">
-                <span class="sparkle-icon">✦</span> ResolvIQ Neural Synthesis Engine
-              </span>
-              <span class="hero-accuracy-tag">
-                <span class="badge-dot"></span> 100% Zero-Hallucination
-              </span>
-            </div>
-            <h2 class="hero-console-heading">Ask Natural Language Operational Questions</h2>
-            <p class="hero-console-subtext">
-              Ask anything in plain English. Natural language is mapped to validated Pydantic AST and executed directly as strictly parameterized SQLite against 500 support tickets in milliseconds.
-            </p>
-          </div>
-          <div class="hero-actions-right">
-            <button class="btn-secondary hero-studio-link-btn" id="goToStudioBtn">
-              <span>Open Query Studio</span> &rarr;
-            </button>
-          </div>
-        </div>
-
-        <!-- Trust & Telemetry Feature Pills -->
-        <div class="hero-trust-bar">
-          <span class="trust-pill" title="Security Guaranteed: Never executes raw unvalidated LLM SQL code"><span class="trust-icon">&#128737;</span> Parameterized SQL Shield</span>
-          <span class="trust-pill" title="Hardware Accelerated: B-Tree indexed queries execute in sub-millisecond"><span class="trust-icon">&#9889;</span> B-Tree Indexed (&lt;5ms)</span>
-          <span class="trust-pill" title="Multi-Tier Orchestration: Cloud Groq 70B &amp; Local Ollama 8B with Fallback"><span class="trust-icon">&#129504;</span> Groq / Ollama / Fallback</span>
-          <span class="trust-pill" title="Live Operational Customer Support Dataset"><span class="trust-icon">&#128193;</span> 500 Ticket Records</span>
-        </div>
-
-        <!-- Curated Interactive Inquiry Cards -->
-        <div class="hero-prompts-section">
-          <div class="hero-prompts-label">
-            <span>Operational Question Templates:</span>
-            <span class="prompts-sublabel">(Click any card to analyze instantly)</span>
-          </div>
-          <div class="hero-prompts-grid">
-            <button type="button" class="hero-prompt-card" data-query="How many tickets are currently open?">
-              <span class="prompt-category-badge badge-blue">&#128202; Volume</span>
-              <span class="prompt-text">How many tickets are currently open?</span>
-              <span class="prompt-expected">Count &rarr; 111 Open</span>
-            </button>
-
-            <button type="button" class="hero-prompt-card" data-query="How many critical tickets are unresolved?">
-              <span class="prompt-category-badge badge-red">&#128680; Escalations</span>
-              <span class="prompt-text">How many critical tickets are unresolved?</span>
-              <span class="prompt-expected">SLA &rarr; 31 Critical</span>
-            </button>
-
-            <button type="button" class="hero-prompt-card" data-query="Which agent resolved the most tickets this month?">
-              <span class="prompt-category-badge badge-green">&#128101; Performance</span>
-              <span class="prompt-text">Which agent resolved the most tickets this month?</span>
-              <span class="prompt-expected">Top &rarr; AGT-12 / AGT-09</span>
-            </button>
-
-            <button type="button" class="hero-prompt-card" data-query="What is the average customer rating for Technical category tickets?">
-              <span class="prompt-category-badge badge-purple">&#11088; CSAT</span>
-              <span class="prompt-text">What is the average rating for Technical tickets?</span>
-              <span class="prompt-expected">Metric &rarr; 3.74 Rating</span>
-            </button>
-
-            <button type="button" class="hero-prompt-card" data-query="Show me all Critical tickets not resolved within 12 hours.">
-              <span class="prompt-category-badge badge-amber">&#9201; Breach Outliers</span>
-              <span class="prompt-text">Show Critical tickets not resolved in 12h</span>
-              <span class="prompt-expected">Filter &rarr; 3 Outliers</span>
-            </button>
-
-            <button type="button" class="hero-prompt-card" data-query="Which agent has the lowest average customer rating?">
-              <span class="prompt-category-badge badge-cyan">&#128269; CSAT Drop</span>
-              <span class="prompt-text">Which agent has the lowest average customer rating?</span>
-              <span class="prompt-expected">Min &rarr; AGT-08 (3.48)</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- High-Tech Command Bar Form -->
-        <form id="overviewQueryForm" class="hero-query-form">
-          <div class="hero-command-bar">
-            <div class="command-input-icon">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="11" cy="11" r="8"></circle>
-                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-              </svg>
-            </div>
-            <input 
-              type="text" 
-              id="overviewQueryInput" 
-              class="hero-command-input" 
-              placeholder="Ask anything (e.g. Which category has the highest number of unresolved tickets?)..." 
-              required
-              autocomplete="off"
-            />
-            <div class="command-input-actions">
-              <kbd class="hero-kbd-pill" title="Press Enter to execute">Enter &#9166;</kbd>
-              <button type="submit" id="overviewSubmitBtn" class="btn-hero-submit">
-                <span class="sparkle-icon">&#10022;</span>
-                <span class="btn-text">Ask ResolvIQ</span>
-              </button>
-            </div>
-          </div>
-        </form>
-
-          <!-- Dynamic Result Box -->
-          <div class="result-card-box hidden" id="overviewResultCard">
-            <!-- Top Shimmer Accent -->
-            <div class="result-shimmer-bar"></div>
-
-            <div class="result-card-header">
-              <div class="result-meta-badges">
-                <span class="ai-engine-badge">
-                  <span class="sparkle-icon">✦</span> AI Intelligence Engine
-                </span>
-                <span class="query-type-tag" id="overviewQueryType">COUNT</span>
-                <span class="exec-time-pill" id="overviewExecTime">-- ms</span>
-                <span class="deterministic-badge" title="Guaranteed safe execution against B-tree indexed SQLite database">
-                  <span class="badge-dot"></span> 100% Deterministic SQL
-                </span>
-              </div>
-              <div class="result-actions-bar">
-                <button class="btn-secondary btn-icon-label" id="overviewCopyAnswerBtn" title="Copy answer to clipboard">
-                  <span class="btn-icon">&#128203;</span> <span class="btn-text">Copy Answer</span>
-                </button>
-              </div>
-            </div>
-
-            <!-- Loading Thinking State -->
-            <div class="query-thinking-state hidden" id="overviewThinkingState">
-              <div class="thinking-spinner"></div>
-              <div class="thinking-content">
-                <div class="thinking-title">Synthesizing Natural Language &amp; Schema Mapping...</div>
-                <div class="thinking-subtitle">Validating Pydantic AST &bull; Compiling Zero-Injection SQLite Plan</div>
-              </div>
-              <div class="thinking-timer" id="overviewTimer">0.0s</div>
-            </div>
-
-            <!-- Verified Answer Hero Banner -->
-            <div class="answer-banner" id="overviewAnswerBanner">
-              <div class="answer-check-icon" title="Zero-Hallucination Verified Data Result">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                  <path d="m9 12 2 2 4-4"/>
-                </svg>
-              </div>
-              <div class="answer-body">
-                <div class="answer-header-title">
-                  <h4>Verified Data-Backed Answer</h4>
-                  <span class="answer-verified-pill">Ground Truth Verified</span>
-                </div>
-                <p id="overviewAnswerText">--</p>
-              </div>
-            </div>
-
-            <!-- Applied Filters Breakdown -->
-            <div class="applied-filters-wrap hidden" id="overviewFiltersWrap">
-              <div class="filters-wrap-label">
-                <span class="filters-icon">&#9889;</span>
-                <span>Active Scope Filters:</span>
-              </div>
-              <div id="overviewFiltersList" class="filters-chips-container"></div>
-            </div>
-
-            <!-- Action Trigger Cards: View SQL & View Data -->
-            <div class="inspector-action-cards-grid">
-              <button type="button" class="inspector-action-card" id="overviewBtnViewSql">
-                <div class="action-card-left">
-                  <div class="action-card-icon icon-sql">&#60;/&#62;</div>
-                  <div class="action-card-info">
-                    <span class="action-card-title">Generated SQL Query</span>
-                    <span class="action-card-sub">Safe Parameterized SQLite Statement</span>
-                  </div>
-                </div>
-                <div class="action-card-right">
-                  <span class="action-card-badge">Show Code <span class="arrow-indicator">&#9662;</span></span>
-                </div>
-              </button>
-
-              <button type="button" class="inspector-action-card" id="overviewBtnViewData">
-                <div class="action-card-left">
-                  <div class="action-card-icon icon-data">&#128202;</div>
-                  <div class="action-card-info">
-                    <span class="action-card-title">Matching Data Records</span>
-                    <span class="action-card-sub" id="overviewActionDataSub">Tabular records found</span>
-                  </div>
-                </div>
-                <div class="action-card-right">
-                  <span class="action-card-badge" id="overviewDataCountBadge">0 records <span class="arrow-indicator">&#9662;</span></span>
-                </div>
-              </button>
-            </div>
-
-            <!-- Expandable Unified Technical & Data Hub -->
-            <div class="tech-inspector-hub hidden" id="overviewTechBody">
-              <!-- Tab Bar inside Hub -->
-              <div class="inspector-hub-header">
-                <div class="hub-tabs-list">
-                  <button type="button" class="hub-tab-btn active" data-tab="sql" id="overviewTabBtnSql">
-                    <span class="hub-tab-icon">&#60;/&#62;</span>
-                    <span>SQL Statement</span>
-                  </button>
-                  <button type="button" class="hub-tab-btn" data-tab="data" id="overviewTabBtnData">
-                    <span class="hub-tab-icon">&#128202;</span>
-                    <span>Result Data Table</span>
-                    <span class="hub-tab-counter" id="overviewHubDataCounter">0</span>
-                  </button>
-                  <button type="button" class="hub-tab-btn" data-tab="ast" id="overviewTabBtnAst">
-                    <span class="hub-tab-icon">&#9881;</span>
-                    <span>QueryIntent AST</span>
-                  </button>
-                </div>
-                <button type="button" class="btn-hub-close" id="overviewHubCloseBtn" title="Collapse Inspector">&times; Close</button>
-              </div>
-
-              <!-- Panel 1: SQL Code & Bindings -->
-              <div class="hub-tab-panel" id="overviewPanelSql">
-                <div class="inspector-card">
-                  <div class="inspector-card-header">
-                    <span class="inspector-section-label">Safe Parameterized SQLite Query Executed</span>
-                    <button class="btn-code-copy" id="overviewCopySqlBtn" title="Copy SQL statement">&#128203; Copy SQL</button>
-                  </div>
-                  <div class="code-block-display" id="overviewSqlExecuted">--</div>
-                </div>
-                <div class="inspector-card">
-                  <div class="inspector-section-label">Bound Execution Parameters</div>
-                  <div class="code-block-display font-mono" id="overviewSqlParams">[]</div>
-                </div>
-              </div>
-
-              <!-- Panel 2: Data Records Table -->
-              <div class="hub-tab-panel hidden" id="overviewPanelData">
-                <div class="inspector-card" id="overviewResultsCard">
-                  <div class="inspector-card-header">
-                    <span class="inspector-section-label">Filtered Data Records</span>
-                    <div style="display: flex; gap: 8px; align-items: center;">
-                      <span class="inspector-result-count" id="overviewResultCount">0 records</span>
-                      <button class="btn-code-copy" id="overviewExportCsvBtn" title="Export to CSV">&#128229; Export CSV</button>
-                    </div>
-                  </div>
-                  <div class="inspector-results-table-wrap" id="overviewResultsTableWrap">
-                    <table class="inspector-results-table" id="overviewResultsTable">
-                      <thead id="overviewResultsHead"></thead>
-                      <tbody id="overviewResultsBody"></tbody>
-                    </table>
-                  </div>
-                  <div class="inspector-no-results hidden" id="overviewNoResults">No tabular data returned for this query type.</div>
-                </div>
-              </div>
-
-              <!-- Panel 3: QueryIntent AST -->
-              <div class="hub-tab-panel hidden" id="overviewPanelAst">
-                <div class="inspector-card">
-                  <div class="inspector-card-header">
-                    <span class="inspector-section-label">Validated Pydantic QueryIntent Schema</span>
-                    <span class="toggle-badge">Zero-Hallucination AST</span>
-                  </div>
-                  <div class="code-block-display font-mono" id="overviewQueryIntentJson">{}</div>
-                </div>
-              </div>
             </div>
           </div>
         </div>
