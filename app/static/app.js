@@ -17,6 +17,16 @@ let queryHistory = [];
 const themeToggleBtn = document.getElementById('themeToggleBtn');
 const themeIcon = document.getElementById('themeIcon');
 const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+const mobileDrawerOverlay = document.getElementById('mobileDrawerOverlay');
+const mobileDrawerPanel = document.getElementById('mobileDrawerPanel');
+const mobileDrawerCloseBtn = document.getElementById('mobileDrawerCloseBtn');
+const mobileAnomalyBadge = document.getElementById('mobileAnomalyBadge');
+const mobileTicketsBadge = document.getElementById('mobileTicketsBadge');
+const mobileHealthStatus = document.getElementById('mobileHealthStatus');
+const mobileDb = document.getElementById('mobileDb');
+const mobileProvider = document.getElementById('mobileProvider');
+const mobileModel = document.getElementById('mobileModel');
+const mobileReloadDbBtn = document.getElementById('mobileReloadDbBtn');
 const healthStatusText = document.getElementById('healthStatusText');
 const metaDb = document.getElementById('metaDb');
 const metaProvider = document.getElementById('metaProvider');
@@ -233,12 +243,46 @@ function setupTabs() {
     viewAllAnomaliesBtn.addEventListener('click', () => switchTab('tabAnomalies'));
   }
 
+  function openMobileDrawer() {
+    if (mobileDrawerPanel) mobileDrawerPanel.classList.add('open');
+    if (mobileDrawerOverlay) mobileDrawerOverlay.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeMobileDrawer() {
+    if (mobileDrawerPanel) mobileDrawerPanel.classList.remove('open');
+    if (mobileDrawerOverlay) mobileDrawerOverlay.classList.add('hidden');
+    document.body.style.overflow = '';
+  }
+
   if (mobileMenuBtn) {
-    mobileMenuBtn.addEventListener('click', () => {
-      const meta = document.querySelector('.app-top-meta');
-      if (meta) {
-        meta.style.display = meta.style.display === 'flex' ? 'none' : 'flex';
-      }
+    mobileMenuBtn.addEventListener('click', openMobileDrawer);
+  }
+  if (mobileDrawerCloseBtn) {
+    mobileDrawerCloseBtn.addEventListener('click', closeMobileDrawer);
+  }
+  if (mobileDrawerOverlay) {
+    mobileDrawerOverlay.addEventListener('click', closeMobileDrawer);
+  }
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && mobileDrawerPanel && mobileDrawerPanel.classList.contains('open')) {
+      closeMobileDrawer();
+    }
+  });
+
+  const mobileNavLinks = document.querySelectorAll('.mobile-nav-link');
+  mobileNavLinks.forEach(link => {
+    link.addEventListener('click', () => {
+      const targetTabId = link.getAttribute('data-tab');
+      switchTab(targetTabId);
+      closeMobileDrawer();
+    });
+  });
+
+  if (mobileReloadDbBtn) {
+    mobileReloadDbBtn.addEventListener('click', () => {
+      closeMobileDrawer();
+      reloadDatabase();
     });
   }
 }
@@ -249,6 +293,15 @@ function switchTab(targetId) {
       t.classList.add('active');
     } else {
       t.classList.remove('active');
+    }
+  });
+
+  const mobileNavLinks = document.querySelectorAll('.mobile-nav-link');
+  mobileNavLinks.forEach(ml => {
+    if (ml.getAttribute('data-tab') === targetId) {
+      ml.classList.add('active');
+    } else {
+      ml.classList.remove('active');
     }
   });
 
@@ -1421,10 +1474,16 @@ async function fetchHealth() {
 
     if (systemTelemetryProvider) systemTelemetryProvider.textContent = prov;
     if (systemTelemetryModel) systemTelemetryModel.textContent = data.model;
+
+    if (mobileHealthStatus) mobileHealthStatus.textContent = isConnected ? '● Operational' : '● Degraded';
+    if (mobileDb) mobileDb.textContent = `Connected (${data.tickets_loaded})`;
+    if (mobileProvider) mobileProvider.textContent = prov;
+    if (mobileModel) mobileModel.textContent = data.model;
   } catch (err) {
     healthStatusText.textContent = 'API Offline';
     metaDb.textContent = 'DB: Disconnected';
     metaProvider.textContent = 'Provider: Offline';
+    if (mobileHealthStatus) mobileHealthStatus.textContent = '● Offline';
   }
 }
 
@@ -1445,6 +1504,8 @@ async function fetchStats() {
     valAnomalies.textContent = data.anomaly_count.toLocaleString();
     if (anomalyTabBadge) anomalyTabBadge.textContent = data.anomaly_count;
     if (anomalyCenterBadge) anomalyCenterBadge.textContent = `${data.anomaly_count} Outliers Flagged`;
+    if (mobileAnomalyBadge) mobileAnomalyBadge.textContent = data.anomaly_count;
+    if (mobileTicketsBadge) mobileTicketsBadge.textContent = data.total_tickets || 500;
   } catch (err) {
     console.error('Failed to load stats:', err);
   }

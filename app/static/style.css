@@ -163,6 +163,8 @@
 html {
   font-size: 14.5px;
   scroll-behavior: smooth;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 body {
@@ -175,6 +177,8 @@ body {
   display: flex;
   flex-direction: column;
   transition: background-color var(--transition-fast), color var(--transition-fast);
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 a {
@@ -201,19 +205,24 @@ button, input, select, textarea {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0 24px;
+  padding: 0 20px;
   height: 56px;
   position: sticky;
   top: 0;
   z-index: 100;
   box-shadow: var(--shadow-sm);
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .app-brand-group {
   display: flex;
   align-items: center;
   gap: 12px;
+  min-width: 0;
+  flex-shrink: 0;
 }
 
 .app-brand-logo-container {
@@ -240,6 +249,7 @@ button, input, select, textarea {
 .app-brand-text {
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
 
 .app-service-title {
@@ -250,6 +260,7 @@ button, input, select, textarea {
   display: flex;
   align-items: center;
   gap: 8px;
+  white-space: nowrap;
 }
 
 .app-service-badge {
@@ -261,17 +272,30 @@ button, input, select, textarea {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  white-space: nowrap;
 }
 
 .app-service-subtext {
-  font-size: 0.75rem;
+  font-size: 0.73rem;
   color: #94a3b8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 320px;
 }
 
 .app-top-actions {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.app-top-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 .app-top-meta {
@@ -359,8 +383,8 @@ button, input, select, textarea {
 /* Mobile Hamburger Menu Toggle Button */
 .mobile-menu-btn {
   display: none;
-  background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.16);
   color: #ffffff;
   width: 36px;
   height: 36px;
@@ -368,6 +392,204 @@ button, input, select, textarea {
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  padding: 8px;
+  flex-direction: column;
+  gap: 4px;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.mobile-menu-btn:hover {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(99, 102, 241, 0.5);
+}
+
+.hamburger-bar {
+  width: 18px;
+  height: 2px;
+  background-color: #ffffff;
+  border-radius: 2px;
+  transition: all 0.2s ease;
+}
+
+/* --------------------------------------------------------------------------
+   Mobile Navigation Drawer (Slide-Over Panel & Backdrop)
+   -------------------------------------------------------------------------- */
+.mobile-drawer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(4px);
+  z-index: 1100;
+  transition: opacity 0.25s ease;
+}
+
+.mobile-drawer-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 295px;
+  max-width: 85vw;
+  background: #0b1120;
+  border-left: 1.5px solid rgba(99, 102, 241, 0.35);
+  box-shadow: -10px 0 35px rgba(0, 0, 0, 0.65);
+  z-index: 1200;
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.mobile-drawer-panel.open {
+  transform: translateX(0);
+}
+
+.mobile-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.btn-drawer-close {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  font-size: 1.3rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-drawer-close:hover {
+  background: rgba(239, 68, 68, 0.2);
+  color: #fca5a5;
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
+.mobile-drawer-body {
+  padding: 16px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.drawer-section-label {
+  font-size: 0.68rem;
+  font-weight: 750;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #94a3b8;
+  margin-bottom: -6px;
+}
+
+.mobile-drawer-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mobile-nav-link {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  width: 100%;
+  padding: 11px 14px;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  color: #cbd5e1;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.mobile-nav-link .drawer-link-text {
+  flex-grow: 1;
+}
+
+.mobile-nav-link:hover {
+  background: rgba(99, 102, 241, 0.15);
+  border-color: rgba(99, 102, 241, 0.35);
+  color: #ffffff;
+}
+
+.mobile-nav-link.active {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.25), rgba(59, 130, 246, 0.25));
+  border-color: #6366f1;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.25);
+}
+
+.mobile-drawer-telemetry {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+}
+
+.drawer-telemetry-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.78rem;
+}
+
+.drawer-telemetry-key {
+  color: #94a3b8;
+}
+
+.drawer-telemetry-val {
+  color: #f1f5f9;
+  font-weight: 600;
+}
+
+.drawer-telemetry-val.text-green {
+  color: #4ade80;
+}
+
+.mobile-drawer-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.btn-drawer-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all var(--transition-fast);
+}
+
+.btn-drawer-action:hover {
+  background: rgba(99, 102, 241, 0.2);
+  border-color: #6366f1;
+  text-decoration: none;
 }
 
 /* --------------------------------------------------------------------------
@@ -409,20 +631,29 @@ button, input, select, textarea {
 .app-tabs-container {
   background: var(--bg-surface);
   border-bottom: 1px solid var(--border-color);
-  padding: 0 24px;
+  padding: 0 20px;
   display: flex;
   gap: 4px;
   overflow-x: auto;
-  scrollbar-width: none;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(99, 102, 241, 0.3) transparent;
   -webkit-overflow-scrolling: touch;
   position: sticky;
   top: 56px;
   z-index: 90;
   backdrop-filter: blur(8px);
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .app-tabs-container::-webkit-scrollbar {
-  display: none;
+  height: 3px;
+}
+
+.app-tabs-container::-webkit-scrollbar-thumb {
+  background: rgba(99, 102, 241, 0.3);
+  border-radius: 3px;
 }
 
 .nav-tab-btn {
@@ -438,6 +669,7 @@ button, input, select, textarea {
   align-items: center;
   gap: 8px;
   white-space: nowrap;
+  flex-shrink: 0;
   transition: all var(--transition-fast);
 }
 
@@ -2630,8 +2862,16 @@ button, input, select, textarea {
    21. RESPONSIVE BREAKPOINTS (Mobile, Tablet, Desktop)
    -------------------------------------------------------------------------- */
 
-/* Large Tablets & Small Laptops (max-width: 1200px) */
-@media (max-width: 1200px) {
+/* Standard Laptops & Wide Tablets (max-width: 1250px) */
+@media (max-width: 1250px) {
+  .app-service-subtext {
+    display: none !important;
+  }
+
+  #metaModel {
+    display: none !important;
+  }
+
   .analytics-grid {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -2641,8 +2881,25 @@ button, input, select, textarea {
   }
 }
 
-/* Small Laptops (max-width: 1024px) */
-@media (max-width: 1024px) {
+/* Medium Laptops & Landscape Tablets (max-width: 1080px) */
+@media (max-width: 1080px) {
+  .app-top-bar {
+    padding: 0 16px;
+  }
+
+  #metaProvider {
+    display: none !important;
+  }
+
+  .app-service-badge {
+    display: none !important;
+  }
+
+  .app-docs-link {
+    padding: 4px 8px;
+    font-size: 0.74rem;
+  }
+
   .app-workspace {
     padding: 20px;
   }
@@ -2651,8 +2908,14 @@ button, input, select, textarea {
     grid-template-columns: repeat(2, 1fr);
   }
 
-  .query-chips-grid {
-    grid-template-columns: repeat(2, 1fr);
+  .app-tabs-container {
+    padding: 0 16px;
+  }
+
+  .nav-tab-btn {
+    padding: 10px 12px;
+    font-size: 0.84rem;
+    gap: 6px;
   }
 
   .result-meta-bar {
@@ -2666,8 +2929,32 @@ button, input, select, textarea {
   }
 }
 
-/* Standard Tablets & iPad Portrait (max-width: 992px) */
-@media (max-width: 992px) {
+/* Tablets & DevTools / Split-Screen (max-width: 960px) */
+@media (max-width: 960px) {
+  .app-top-bar {
+    padding: 0 14px;
+  }
+
+  .app-top-meta .app-meta-tag,
+  .app-top-meta .app-docs-link {
+    display: none !important;
+  }
+
+  .mobile-menu-btn {
+    display: flex !important;
+  }
+
+  .app-tabs-container {
+    padding: 0 12px;
+    scrollbar-width: thin;
+  }
+
+  .nav-tab-btn {
+    padding: 9px 11px;
+    font-size: 0.82rem;
+    gap: 5px;
+  }
+
   .kpi-row {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -2697,29 +2984,51 @@ button, input, select, textarea {
     gap: 8px;
   }
 
-  .app-top-meta {
-    display: none;
+  .app-logo-img {
+    width: 32px;
+    height: 32px;
   }
 
-  .mobile-menu-btn {
-    display: flex;
+  .app-service-title {
+    font-size: 0.98rem;
+  }
+
+  .app-top-meta {
+    gap: 4px;
+  }
+
+  .telemetry-pill {
+    padding: 3px 8px;
+    font-size: 0.72rem;
   }
 
   .app-subheader {
-    padding: 10px 12px;
+    padding: 8px 12px;
+  }
+
+  .app-breadcrumbs {
+    font-size: 0.75rem;
+    max-width: 220px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  #reloadDbBtn {
+    padding: 4px 8px;
+    font-size: 0.74rem;
   }
 
   .app-tabs-container {
-    padding: 0 12px;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
+    top: 52px;
+    padding: 0 8px;
   }
 
   .nav-tab-btn {
     white-space: nowrap;
     flex-shrink: 0;
-    padding: 10px 14px;
-    font-size: 0.82rem;
+    padding: 8px 10px;
+    font-size: 0.78rem;
   }
 
   .nav-tab-btn .tab-badge {
@@ -2909,6 +3218,19 @@ button, input, select, textarea {
   .app-top-bar {
     padding: 0 10px;
     height: 48px;
+  }
+
+  .telemetry-pill span:not(.status-indicator-dot) {
+    display: none;
+  }
+
+  .telemetry-pill {
+    padding: 6px;
+    border-radius: 50%;
+  }
+
+  .app-tabs-container {
+    top: 48px;
   }
 
   .nav-tab-btn {

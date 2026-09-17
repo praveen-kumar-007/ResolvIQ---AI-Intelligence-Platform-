@@ -51,11 +51,90 @@
       </button>
 
       <!-- Mobile Hamburger Button -->
-      <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Toggle Navigation Menu">
-        &#9776;
+      <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Toggle Navigation Menu" title="Open Navigation Menu">
+        <span class="hamburger-bar"></span>
+        <span class="hamburger-bar"></span>
+        <span class="hamburger-bar"></span>
       </button>
     </div>
   </header>
+
+  <!-- ====================================================================
+       Responsive Mobile Navigation Drawer & Backdrop
+       ==================================================================== -->
+  <div class="mobile-drawer-overlay hidden" id="mobileDrawerOverlay"></div>
+  <aside class="mobile-drawer-panel" id="mobileDrawerPanel" aria-label="Mobile Navigation Menu">
+    <div class="mobile-drawer-header">
+      <div class="app-brand-group">
+        <div class="app-brand-logo-container">
+          <img src="/static/resolviq_logo.jpg" alt="ResolvIQ Logo" class="app-logo-img" />
+        </div>
+        <div class="app-brand-text">
+          <div class="app-service-title">ResolvIQ</div>
+          <span class="app-service-badge" style="width: fit-content;">AI Platform</span>
+        </div>
+      </div>
+      <button type="button" class="btn-drawer-close" id="mobileDrawerCloseBtn" aria-label="Close Navigation Menu">&times;</button>
+    </div>
+
+    <div class="mobile-drawer-body">
+      <div class="drawer-section-label">NAVIGATION TABS</div>
+      <nav class="mobile-drawer-nav">
+        <button type="button" class="mobile-nav-link active" data-tab="tabOverview">
+          <span class="drawer-link-icon">&#128202;</span>
+          <span class="drawer-link-text">Executive Overview</span>
+        </button>
+        <button type="button" class="mobile-nav-link" data-tab="tabQueryStudio">
+          <span class="drawer-link-icon">&#129302;</span>
+          <span class="drawer-link-text">AI Query Studio</span>
+        </button>
+        <button type="button" class="mobile-nav-link" data-tab="tabAnomalies">
+          <span class="drawer-link-icon">&#9888;</span>
+          <span class="drawer-link-text">Anomaly Center</span>
+          <span class="tab-badge" id="mobileAnomalyBadge">177</span>
+        </button>
+        <button type="button" class="mobile-nav-link" data-tab="tabTickets">
+          <span class="drawer-link-icon">&#128194;</span>
+          <span class="drawer-link-text">Ticket Repository</span>
+          <span class="tab-badge" id="mobileTicketsBadge">500</span>
+        </button>
+        <button type="button" class="mobile-nav-link" data-tab="tabSystem">
+          <span class="drawer-link-icon">&#9881;</span>
+          <span class="drawer-link-text">Architecture &amp; Telemetry</span>
+        </button>
+      </nav>
+
+      <div class="drawer-section-label">SYSTEM TELEMETRY</div>
+      <div class="mobile-drawer-telemetry">
+        <div class="drawer-telemetry-row">
+          <span class="drawer-telemetry-key">Status</span>
+          <span class="drawer-telemetry-val text-green" id="mobileHealthStatus">● Operational</span>
+        </div>
+        <div class="drawer-telemetry-row">
+          <span class="drawer-telemetry-key">Database</span>
+          <span class="drawer-telemetry-val" id="mobileDb">Connected (500)</span>
+        </div>
+        <div class="drawer-telemetry-row">
+          <span class="drawer-telemetry-key">Provider</span>
+          <span class="drawer-telemetry-val" id="mobileProvider">Ollama / Groq</span>
+        </div>
+        <div class="drawer-telemetry-row">
+          <span class="drawer-telemetry-key">Active Model</span>
+          <span class="drawer-telemetry-val font-mono" id="mobileModel">qwen3:8b</span>
+        </div>
+      </div>
+
+      <div class="drawer-section-label">QUICK ACTIONS</div>
+      <div class="mobile-drawer-actions">
+        <a href="/docs" target="_blank" class="btn-drawer-action">
+          <span>&#128196;</span> Interactive Swagger Docs
+        </a>
+        <button type="button" class="btn-drawer-action" id="mobileReloadDbBtn">
+          <span>&#8635;</span> Reload SQLite Dataset
+        </button>
+      </div>
+    </div>
+  </aside>
 
   <!-- ====================================================================
        Subheader & Breadcrumb Bar
