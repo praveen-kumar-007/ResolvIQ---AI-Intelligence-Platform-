@@ -52,6 +52,11 @@ const overviewTechArrow = document.getElementById('overviewTechArrow');
 const overviewSqlExecuted = document.getElementById('overviewSqlExecuted');
 const overviewSqlParams = document.getElementById('overviewSqlParams');
 const overviewQueryIntentJson = document.getElementById('overviewQueryIntentJson');
+const overviewResultsHead = document.getElementById('overviewResultsHead');
+const overviewResultsBody = document.getElementById('overviewResultsBody');
+const overviewResultsTableWrap = document.getElementById('overviewResultsTableWrap');
+const overviewResultCount = document.getElementById('overviewResultCount');
+const overviewNoResults = document.getElementById('overviewNoResults');
 const overviewAnomaliesBody = document.getElementById('overviewAnomaliesBody');
 const overviewThinkingState = document.getElementById('overviewThinkingState');
 const overviewTimer = document.getElementById('overviewTimer');
@@ -689,8 +694,78 @@ function renderOverviewResult(data) {
   overviewSqlParams.textContent = JSON.stringify(data.filters ? data.filters.map(f => f.value).filter(v => v !== null) : [], null, 2);
   overviewQueryIntentJson.textContent = JSON.stringify(data.query_intent || { operation: data.query_type, filters: data.filters }, null, 2);
 
+  // Populate raw results table inside inspector
+  renderOverviewResultsTable(data.result);
+
   overviewResultCard.classList.remove('hidden');
   overviewResultCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function renderOverviewResultsTable(result) {
+  overviewResultsHead.innerHTML = '';
+  overviewResultsBody.innerHTML = '';
+
+  // Handle dict results (count, aggregate)
+  if (result && typeof result === 'object' && !Array.isArray(result)) {
+    overviewResultsTableWrap.classList.remove('hidden');
+    overviewNoResults.classList.add('hidden');
+    overviewResultCount.textContent = '1 record';
+
+    const cols = Object.keys(result);
+    const trHead = document.createElement('tr');
+    cols.forEach(c => {
+      const th = document.createElement('th');
+      th.textContent = c.replace(/_/g, ' ').toUpperCase();
+      trHead.appendChild(th);
+    });
+    overviewResultsHead.appendChild(trHead);
+
+    const tr = document.createElement('tr');
+    cols.forEach(c => {
+      const td = document.createElement('td');
+      td.textContent = result[c] !== null && result[c] !== undefined ? result[c] : '—';
+      tr.appendChild(td);
+    });
+    overviewResultsBody.appendChild(tr);
+    return;
+  }
+
+  // Handle array results (filter_list, group_by, top_n)
+  if (Array.isArray(result) && result.length > 0 && typeof result[0] === 'object') {
+    overviewResultsTableWrap.classList.remove('hidden');
+    overviewNoResults.classList.add('hidden');
+    overviewResultCount.textContent = `${result.length} record${result.length !== 1 ? 's' : ''}`;
+
+    const cols = Object.keys(result[0]);
+    const trHead = document.createElement('tr');
+    cols.forEach(c => {
+      const th = document.createElement('th');
+      th.textContent = c.replace(/_/g, ' ').toUpperCase();
+      trHead.appendChild(th);
+    });
+    overviewResultsHead.appendChild(trHead);
+
+    result.forEach(row => {
+      const tr = document.createElement('tr');
+      cols.forEach(c => {
+        const td = document.createElement('td');
+        let val = row[c];
+        if (val === null || val === undefined) val = '—';
+        td.textContent = val;
+        if (c === 'priority' || c === 'status') {
+          td.innerHTML = `<span class="tag-badge tag-${String(val).toLowerCase()}">${val}</span>`;
+        }
+        tr.appendChild(td);
+      });
+      overviewResultsBody.appendChild(tr);
+    });
+    return;
+  }
+
+  // No tabular data
+  overviewResultsTableWrap.classList.add('hidden');
+  overviewNoResults.classList.remove('hidden');
+  overviewResultCount.textContent = '0 records';
 }
 
 function renderStudioResult(data) {

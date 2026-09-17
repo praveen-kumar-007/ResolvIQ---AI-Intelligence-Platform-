@@ -390,6 +390,19 @@
                 <div class="inspector-section-label">Validated Pydantic QueryIntent AST</div>
                 <div class="code-block-display font-mono" id="overviewQueryIntentJson">{}</div>
               </div>
+              <div class="inspector-card" id="overviewResultsCard">
+                <div class="inspector-card-header">
+                  <span class="inspector-section-label">Raw Query Results</span>
+                  <span class="inspector-result-count" id="overviewResultCount">0 records</span>
+                </div>
+                <div class="inspector-results-table-wrap" id="overviewResultsTableWrap">
+                  <table class="inspector-results-table" id="overviewResultsTable">
+                    <thead id="overviewResultsHead"></thead>
+                    <tbody id="overviewResultsBody"></tbody>
+                  </table>
+                </div>
+                <div class="inspector-no-results hidden" id="overviewNoResults">No tabular data returned for this query type.</div>
+              </div>
             </div>
           </div>
         </div>
