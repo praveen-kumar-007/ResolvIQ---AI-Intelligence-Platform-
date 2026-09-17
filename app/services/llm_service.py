@@ -242,236 +242,275 @@ class LLMService:
         return self._fallback_parse(clean_question)
 
     def _fallback_parse(self, question: str) -> QueryIntent:
-        """Rule-based query parser for when no LLM provider is available.
-        Uses regex and keyword matching to handle common query patterns.
+        """Smart keyword-based intent extractor for when no LLM provider is available.
+        Instead of matching rigid sentence patterns, this scans the entire question
+        for operation signals, filter values, target fields, and numeric thresholds
+        to build a QueryIntent that works with any natural language phrasing.
         """
         q = question.lower().strip()
 
-        # ── Pattern 1: Anomaly detection queries ──
-        if re.search(r"anomal(y|ies|ous)", q) and re.search(r"resolution.?time", q):
-            return QueryIntent(
-                operation=QueryOperation.FILTER_LIST,
-                filters=[
-                    FilterCondition(
-                        field=AllowedColumn.RESOLUTION_TIME_HRS,
-                        operator=FilterOperator.IS_NOT_NULL,
-                    ),
-                    FilterCondition(
-                        field=AllowedColumn.RESOLUTION_TIME_HRS,
-                        operator=FilterOperator.GREATER_THAN,
-                        value=48.35,
-                    ),
-                ],
-                order_by=AllowedColumn.RESOLUTION_TIME_HRS,
-                order_direction=SortOrder.DESC,
-                limit=50,
-                is_ambiguous=False,
-            )
+        # ── Step 1: Extract all recognizable entities from the question ──
+        filters = []
+        detected_field = None
+        detected_agg_func = None
+        detected_group_by = None
+        detected_order = SortOrder.DESC
+        detected_limit = None
 
-        # ── Pattern 2: Critical tickets not resolved within N hours ──
-        critical_unresolved_match = re.search(
-            r"critical.*(?:not\s+resolved|unresolved).*?(\d+)\s*(?:hour|hr)", q
+        # 1a. Detect STATUS values
+        status_map = {"open": "Open", "resolved": "Resolved", "escalated": "Escalated",
+                       "unresolved": "Open", "pending": "Open", "closed": "Resolved"}
+        for keyword, value in status_map.items():
+            if re.search(r'\b' + keyword + r'\b', q):
+                filters.append(FilterCondition(
+                    field=AllowedColumn.STATUS, operator=FilterOperator.EQUALS, value=value
+                ))
+                break
+
+        # 1b. Detect PRIORITY values
+        priority_map = {"critical": "Critical", "high": "High", "medium": "Medium", "low": "Low",
+                         "urgent": "Critical", "severe": "Critical"}
+        for keyword, value in priority_map.items():
+            if re.search(r'\b' + keyword + r'\b', q):
+                filters.append(FilterCondition(
+                    field=AllowedColumn.PRIORITY, operator=FilterOperator.EQUALS, value=value
+                ))
+                break
+
+        # 1c. Detect CATEGORY values
+        category_map = {"technical": "Technical", "billing": "Billing", "general": "General",
+                         "tech": "Technical", "payment": "Billing", "finance": "Billing"}
+        for keyword, value in category_map.items():
+            if re.search(r'\b' + keyword + r'\b', q):
+                filters.append(FilterCondition(
+                    field=AllowedColumn.CATEGORY, operator=FilterOperator.EQUALS, value=value
+                ))
+                break
+
+        # 1d. Detect AGENT references (e.g., "AGT-12", "agent 5")
+        agent_match = re.search(r'agt[- ]?(\d+)', q)
+        if agent_match:
+            agent_id = f"AGT-{agent_match.group(1).zfill(2)}"
+            filters.append(FilterCondition(
+                field=AllowedColumn.AGENT_ID, operator=FilterOperator.EQUALS, value=agent_id
+            ))
+
+        # 1e. Detect TICKET ID references (e.g., "TKT-001")
+        ticket_match = re.search(r'tkt[- ]?(\d+)', q)
+        if ticket_match:
+            ticket_id = f"TKT-{ticket_match.group(1).zfill(3)}"
+            filters.append(FilterCondition(
+                field=AllowedColumn.TICKET_ID, operator=FilterOperator.EQUALS, value=ticket_id
+            ))
+
+        # 1f. Detect NULL / missing value checks
+        null_fields = {
+            "customer rating": AllowedColumn.CUSTOMER_RATING,
+            "rating": AllowedColumn.CUSTOMER_RATING,
+            "resolution time": AllowedColumn.RESOLUTION_TIME_HRS,
+            "resolution": AllowedColumn.RESOLUTION_TIME_HRS,
+            "response time": AllowedColumn.RESPONSE_TIME_HRS,
+            "response": AllowedColumn.RESPONSE_TIME_HRS,
+        }
+        if re.search(r'\b(?:no|without|missing|null|empty|blank)\b', q):
+            for field_keyword, field_enum in null_fields.items():
+                if field_keyword in q:
+                    filters.append(FilterCondition(
+                        field=field_enum, operator=FilterOperator.IS_NULL
+                    ))
+                    detected_field = field_enum
+                    break
+
+        # 1g. Detect target FIELD for aggregation/sorting (check longer phrases first)
+        field_keywords = {
+            "customer rating": AllowedColumn.CUSTOMER_RATING,
+            "satisfaction": AllowedColumn.CUSTOMER_RATING,
+            "csat": AllowedColumn.CUSTOMER_RATING,
+            "rating": AllowedColumn.CUSTOMER_RATING,
+            "resolution time": AllowedColumn.RESOLUTION_TIME_HRS,
+            "resolve time": AllowedColumn.RESOLUTION_TIME_HRS,
+            "resolution": AllowedColumn.RESOLUTION_TIME_HRS,
+            "response time": AllowedColumn.RESPONSE_TIME_HRS,
+            "first response": AllowedColumn.RESPONSE_TIME_HRS,
+            "response": AllowedColumn.RESPONSE_TIME_HRS,
+        }
+        if not detected_field:
+            for field_keyword in sorted(field_keywords.keys(), key=len, reverse=True):
+                if field_keyword in q:
+                    detected_field = field_keywords[field_keyword]
+                    break
+
+        # 1h. Detect AGGREGATION function
+        agg_keywords = {
+            "average": AggregationType.AVG, "avg": AggregationType.AVG, "mean": AggregationType.AVG,
+            "total amount": AggregationType.SUM, "sum": AggregationType.SUM,
+            "minimum": AggregationType.MIN, "smallest": AggregationType.MIN,
+            "shortest": AggregationType.MIN, "fastest": AggregationType.MIN,
+            "maximum": AggregationType.MAX, "biggest": AggregationType.MAX,
+            "longest": AggregationType.MAX, "slowest": AggregationType.MAX,
+            "lowest": AggregationType.MIN, "least": AggregationType.MIN, "worst": AggregationType.MIN,
+            "highest": AggregationType.MAX, "best": AggregationType.MAX, "most": AggregationType.MAX,
+        }
+        for keyword in sorted(agg_keywords.keys(), key=len, reverse=True):
+            if re.search(r'\b' + keyword + r'\b', q):
+                detected_agg_func = agg_keywords[keyword]
+                if keyword in ("lowest", "smallest", "least", "worst", "shortest", "fastest", "minimum"):
+                    detected_order = SortOrder.ASC
+                break
+
+        # 1i. Detect GROUP BY intent
+        group_by_map = {
+            "by agent": AllowedColumn.AGENT_ID, "per agent": AllowedColumn.AGENT_ID,
+            "each agent": AllowedColumn.AGENT_ID, "which agent": AllowedColumn.AGENT_ID,
+            "by category": AllowedColumn.CATEGORY, "per category": AllowedColumn.CATEGORY,
+            "each category": AllowedColumn.CATEGORY,
+            "by priority": AllowedColumn.PRIORITY, "per priority": AllowedColumn.PRIORITY,
+            "each priority": AllowedColumn.PRIORITY,
+            "by status": AllowedColumn.STATUS, "per status": AllowedColumn.STATUS,
+            "each status": AllowedColumn.STATUS,
+        }
+        for phrase, col in group_by_map.items():
+            if phrase in q:
+                detected_group_by = col
+                break
+        if not detected_group_by:
+            match = re.search(r'\bwhich\s+(agent|category|priority|status)\b', q)
+            if match:
+                col_map = {"agent": AllowedColumn.AGENT_ID, "category": AllowedColumn.CATEGORY,
+                           "priority": AllowedColumn.PRIORITY, "status": AllowedColumn.STATUS}
+                detected_group_by = col_map.get(match.group(1))
+
+        # 1j. Detect NUMERIC thresholds (e.g., "more than 12 hours", "above 48")
+        threshold_gt_match = re.search(
+            r'(?:more\s+than|greater\s+than|over|above|exceeding|beyond|>)\s*(\d+(?:\.\d+)?)', q
         )
-        if critical_unresolved_match:
-            hours = float(critical_unresolved_match.group(1))
+        threshold_lt_match = re.search(
+            r'(?:less\s+than|under|below|fewer\s+than|within|<)\s*(\d+(?:\.\d+)?)', q
+        )
+        # Also detect "not resolved within N hours" pattern
+        unresolved_match = re.search(r'(?:not\s+resolved|unresolved).*?(\d+)\s*(?:hour|hr|h\b)', q)
+
+        if threshold_gt_match and detected_field:
+            val = float(threshold_gt_match.group(1))
+            filters.append(FilterCondition(
+                field=detected_field, operator=FilterOperator.GREATER_THAN, value=val
+            ))
+        elif threshold_lt_match and detected_field:
+            val = float(threshold_lt_match.group(1))
+            filters.append(FilterCondition(
+                field=detected_field, operator=FilterOperator.LESS_THAN, value=val
+            ))
+        elif unresolved_match:
+            hours = float(unresolved_match.group(1))
+            filters.append(FilterCondition(
+                field=AllowedColumn.RESOLUTION_TIME_HRS,
+                operator=FilterOperator.GREATER_THAN, value=hours
+            ))
+
+        # 1k. Detect TOP N / LIMIT
+        top_match = re.search(r'\b(?:top|first|best|worst)\s+(\d+)\b', q)
+        if top_match:
+            detected_limit = int(top_match.group(1))
+        else:
+            bottom_match = re.search(r'\b(?:bottom|last)\s+(\d+)\b', q)
+            if bottom_match:
+                detected_limit = int(bottom_match.group(1))
+                detected_order = SortOrder.ASC
+
+        # 1l. Detect explicit sort direction
+        if re.search(r'\b(?:ascending|asc|lowest\s+first|least\s+first)\b', q):
+            detected_order = SortOrder.ASC
+        elif re.search(r'\b(?:descending|desc|highest\s+first|most\s+first)\b', q):
+            detected_order = SortOrder.DESC
+
+        # ── Step 2: Determine the OPERATION from extracted entities ──
+
+        # Anomaly detection (special case)
+        if re.search(r'\banomal(?:y|ies|ous)\b', q):
+            target_field = detected_field or AllowedColumn.RESOLUTION_TIME_HRS
+            anomaly_filters = [
+                FilterCondition(field=target_field, operator=FilterOperator.IS_NOT_NULL),
+                FilterCondition(field=target_field, operator=FilterOperator.GREATER_THAN, value=48.35),
+            ]
             return QueryIntent(
                 operation=QueryOperation.FILTER_LIST,
-                filters=[
-                    FilterCondition(
-                        field=AllowedColumn.PRIORITY,
-                        operator=FilterOperator.EQUALS,
-                        value="Critical",
-                    ),
-                    FilterCondition(
-                        field=AllowedColumn.RESOLUTION_TIME_HRS,
-                        operator=FilterOperator.GREATER_THAN,
-                        value=hours,
-                    ),
-                ],
-                order_by=AllowedColumn.RESOLUTION_TIME_HRS,
+                filters=anomaly_filters + filters,
+                order_by=target_field,
                 order_direction=SortOrder.DESC,
-                limit=50,
-                is_ambiguous=False,
+                limit=50, is_ambiguous=False,
             )
 
-        # ── Pattern 3: Group-by agent queries ──
-        if re.search(r"which\s+agent.*(?:most|resolved)", q) or re.search(r"agent.*most\s+ticket", q):
+        # GROUP BY queries
+        if detected_group_by:
+            agg_spec = None
+            if detected_agg_func and detected_field and detected_field in (
+                AllowedColumn.CUSTOMER_RATING, AllowedColumn.RESOLUTION_TIME_HRS, AllowedColumn.RESPONSE_TIME_HRS
+            ):
+                agg_spec = AggregationSpec(function=detected_agg_func, field=detected_field)
             return QueryIntent(
                 operation=QueryOperation.GROUP_BY,
-                group_by=AllowedColumn.AGENT_ID,
-                filters=[
-                    FilterCondition(
-                        field=AllowedColumn.STATUS,
-                        operator=FilterOperator.EQUALS,
-                        value="Resolved",
-                    ),
-                ],
-                order_direction=SortOrder.DESC,
-                limit=10,
+                group_by=detected_group_by,
+                aggregation=agg_spec,
+                filters=filters,
+                order_direction=detected_order,
+                limit=detected_limit or 10,
                 is_ambiguous=False,
             )
 
-        # ── Pattern 4: Average/aggregate queries ──
-        avg_match = re.search(r"(?:average|avg)\s+(?:customer\s+)?(?:rating|customer.?rating)", q)
-        if avg_match:
-            filters = []
-            # Check for category filter
-            for cat in ("Technical", "Billing", "General"):
-                if cat.lower() in q:
-                    filters.append(FilterCondition(
-                        field=AllowedColumn.CATEGORY,
-                        operator=FilterOperator.EQUALS,
-                        value=cat,
-                    ))
-                    break
+        # AGGREGATE queries (average, sum, min, max of a numeric field)
+        if detected_agg_func and detected_field and detected_field in (
+            AllowedColumn.CUSTOMER_RATING, AllowedColumn.RESOLUTION_TIME_HRS, AllowedColumn.RESPONSE_TIME_HRS
+        ):
             return QueryIntent(
                 operation=QueryOperation.AGGREGATE,
-                aggregation=AggregationSpec(
-                    function=AggregationType.AVG,
-                    field=AllowedColumn.CUSTOMER_RATING,
-                ),
+                aggregation=AggregationSpec(function=detected_agg_func, field=detected_field),
                 filters=filters,
                 is_ambiguous=False,
             )
 
-        # Average resolution time
-        if re.search(r"(?:average|avg)\s+(?:resolution\s+)?(?:time|resolution.?time)", q):
-            filters = []
-            for cat in ("Technical", "Billing", "General"):
-                if cat.lower() in q:
-                    filters.append(FilterCondition(
-                        field=AllowedColumn.CATEGORY,
-                        operator=FilterOperator.EQUALS,
-                        value=cat,
-                    ))
-                    break
-            return QueryIntent(
-                operation=QueryOperation.AGGREGATE,
-                aggregation=AggregationSpec(
-                    function=AggregationType.AVG,
-                    field=AllowedColumn.RESOLUTION_TIME_HRS,
-                ),
-                filters=filters,
-                is_ambiguous=False,
-            )
-
-        # ── Pattern 5: Tickets with no customer rating (NULL) ──
-        if re.search(r"(?:no|without|missing|null)\s+(?:customer\s+)?rating", q):
-            return QueryIntent(
-                operation=QueryOperation.FILTER_LIST,
-                filters=[
-                    FilterCondition(
-                        field=AllowedColumn.CUSTOMER_RATING,
-                        operator=FilterOperator.IS_NULL,
-                    ),
-                ],
-                limit=50,
-                is_ambiguous=False,
-            )
-
-        # ── Pattern 6: Tickets with no resolution time (NULL) ──
-        if re.search(r"(?:no|without|missing|null)\s+resolution\s*(?:time|_time|hours?|hrs?)?", q):
-            return QueryIntent(
-                operation=QueryOperation.FILTER_LIST,
-                filters=[
-                    FilterCondition(
-                        field=AllowedColumn.RESOLUTION_TIME_HRS,
-                        operator=FilterOperator.IS_NULL,
-                    ),
-                ],
-                limit=50,
-                is_ambiguous=False,
-            )
-
-        # ── Pattern 7: Count queries ──
-        if re.search(r"how\s+many\b", q) or re.search(r"(?:count|total|number)\s+(?:of\s+)?(?:.*?)?ticket", q):
-            filters = []
-            # Detect status filters
-            if "open" in q:
-                filters.append(FilterCondition(
-                    field=AllowedColumn.STATUS,
-                    operator=FilterOperator.EQUALS,
-                    value="Open",
-                ))
-            elif "resolved" in q:
-                filters.append(FilterCondition(
-                    field=AllowedColumn.STATUS,
-                    operator=FilterOperator.EQUALS,
-                    value="Resolved",
-                ))
-            elif "escalated" in q:
-                filters.append(FilterCondition(
-                    field=AllowedColumn.STATUS,
-                    operator=FilterOperator.EQUALS,
-                    value="Escalated",
-                ))
-            # Detect priority filters
-            for pri in ("Critical", "High", "Medium", "Low"):
-                if pri.lower() in q:
-                    filters.append(FilterCondition(
-                        field=AllowedColumn.PRIORITY,
-                        operator=FilterOperator.EQUALS,
-                        value=pri,
-                    ))
-                    break
-            # Detect category filters
-            for cat in ("Technical", "Billing", "General"):
-                if cat.lower() in q:
-                    filters.append(FilterCondition(
-                        field=AllowedColumn.CATEGORY,
-                        operator=FilterOperator.EQUALS,
-                        value=cat,
-                    ))
-                    break
+        # COUNT queries
+        is_count = bool(re.search(r'\b(?:how\s+many|how\s+much|count|total\s+number|number\s+of)\b', q))
+        if is_count:
             return QueryIntent(
                 operation=QueryOperation.COUNT,
                 filters=filters,
                 is_ambiguous=False,
             )
 
-        # ── Pattern 8: Generic filter list (show/list/find tickets) ──
-        if re.search(r"(?:show|list|find|display|get)\s+(?:me\s+)?(?:all\s+)?(?:.*?)?ticket", q):
-            filters = []
-            for status in ("Open", "Resolved", "Escalated"):
-                if status.lower() in q:
-                    filters.append(FilterCondition(
-                        field=AllowedColumn.STATUS,
-                        operator=FilterOperator.EQUALS,
-                        value=status,
-                    ))
-                    break
-            for pri in ("Critical", "High", "Medium", "Low"):
-                if pri.lower() in q:
-                    filters.append(FilterCondition(
-                        field=AllowedColumn.PRIORITY,
-                        operator=FilterOperator.EQUALS,
-                        value=pri,
-                    ))
-                    break
-            for cat in ("Technical", "Billing", "General"):
-                if cat.lower() in q:
-                    filters.append(FilterCondition(
-                        field=AllowedColumn.CATEGORY,
-                        operator=FilterOperator.EQUALS,
-                        value=cat,
-                    ))
-                    break
+        # TOP N queries
+        if detected_limit or re.search(r'\b(?:top|bottom)\b', q):
+            order_field = detected_field or AllowedColumn.RESOLUTION_TIME_HRS
+            return QueryIntent(
+                operation=QueryOperation.TOP_N,
+                filters=filters,
+                order_by=order_field,
+                order_direction=detected_order,
+                limit=detected_limit or 10,
+                is_ambiguous=False,
+            )
+
+        # FILTER LIST — if we extracted any filters, show matching tickets
+        if filters:
+            order_field = detected_field if detected_field else None
             return QueryIntent(
                 operation=QueryOperation.FILTER_LIST,
                 filters=filters,
+                order_by=order_field,
+                order_direction=detected_order,
                 limit=50,
                 is_ambiguous=False,
             )
 
-        # ── Fallback: Mark as ambiguous ──
-        logger.warning(f"Fallback parser could not match question pattern: '{question}'")
+        # ── Step 3: No recognizable entities — mark as ambiguous ──
+        logger.warning(f"Fallback parser could not extract intent from: '{question}'")
         return QueryIntent(
             operation=QueryOperation.FILTER_LIST,
             is_ambiguous=True,
             clarification_needed=(
-                "I couldn't understand your question without AI assistance. "
-                "Please try rephrasing with specific terms like 'how many', 'average', "
-                "'show tickets', or 'which agent'."
+                "I couldn't fully understand your question without AI assistance. "
+                "Try including keywords like ticket status (open/resolved), priority "
+                "(critical/high/medium/low), category (technical/billing/general), "
+                "or metrics (average rating, resolution time)."
             ),
         )
 
